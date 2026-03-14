@@ -4,7 +4,8 @@ import { Order, OrderType } from '@/shared/types';
 import { CROP_LABELS } from '@/shared/constants';
 import { useUser } from '@/hooks/use-user';
 import { TransactButton } from '@/components/transact-button';
-import { formatPrice, formatPricePerKg, formatDeliveryDate } from '@/lib/format';
+import { CropNameLink } from '@/components/crop-name-link';
+import { formatPricePerKg, formatDeliveryDate } from '@/lib/format';
 
 interface OrderBookViewProps {
   orders: Order[];
@@ -128,7 +129,13 @@ export function OrderBookView({ orders, cropType, deliveryDate, onUpdate }: Orde
       </div>
 
       <p className="text-xs text-muted mt-2">
-        {CROP_LABELS[cropType as keyof typeof CROP_LABELS]} · Deliver by {formatDeliveryDate(deliveryDate)}
+        <CropNameLink
+          cropName={CROP_LABELS[cropType as keyof typeof CROP_LABELS]}
+          className="font-medium text-foreground hover:text-primary hover:underline"
+        >
+          {CROP_LABELS[cropType as keyof typeof CROP_LABELS]}
+        </CropNameLink>{' '}
+        · Deliver by {formatDeliveryDate(deliveryDate)}
       </p>
     </div>
   );

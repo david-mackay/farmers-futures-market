@@ -1,5 +1,6 @@
 import { v4 as uuid } from 'uuid';
 import db from './connection';
+import { CROPS } from './crops';
 
 const USERS = [
   { id: 'farmer-alice', address: '0xAlice', display_name: 'Alice (Farmer)', role: 'FARMER', is_verified: 1 },
@@ -56,10 +57,64 @@ const ORDERS = [
 
 function seed() {
   const run = db.transaction(() => {
-    // Clear in FK order: vouchers → orders → users (portable SQL, no shell)
+    // Clear in FK order: vouchers → orders → users, plus crop catalog (portable SQL, no shell)
     db.exec('DELETE FROM vouchers');
     db.exec('DELETE FROM orders');
     db.exec('DELETE FROM users');
+    db.exec('DELETE FROM crops');
+
+    const insertCrop = db.prepare(`
+      INSERT INTO crops (
+        id,
+        common_name,
+        display_name,
+        scientific_name,
+        category,
+        planting_season,
+        harvest_start_days,
+        harvest_end_days,
+        temperature_min_c,
+        temperature_max_c,
+        optimal_temperature_c,
+        altitude_min_m,
+        altitude_max_m,
+        soil_ph_min,
+        soil_ph_max,
+        water_mm_per_week,
+        sunlight,
+        lifecycle,
+        yield_kg_per_hectare,
+        farmgate_price_jmd_per_kg,
+        wholesale_price_jmd_per_kg,
+        retail_price_jmd_per_kg
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    for (const crop of CROPS) {
+      insertCrop.run(
+        crop.id,
+        crop.common_name,
+        crop.display_name,
+        crop.scientific_name,
+        crop.category,
+        crop.planting_season,
+        crop.harvest_start_days,
+        crop.harvest_end_days,
+        crop.temperature_min_c,
+        crop.temperature_max_c,
+        crop.optimal_temperature_c,
+        crop.altitude_min_m,
+        crop.altitude_max_m,
+        crop.soil_ph_min,
+        crop.soil_ph_max,
+        crop.water_mm_per_week,
+        crop.sunlight,
+        crop.lifecycle,
+        crop.yield_kg_per_hectare,
+        crop.farmgate_price_jmd_per_kg,
+        crop.wholesale_price_jmd_per_kg,
+        crop.retail_price_jmd_per_kg
+      );
+    }
 
     const insertUser = db.prepare(
       'INSERT INTO users (id, address, display_name, role, is_verified) VALUES (?, ?, ?, ?, ?)'
@@ -77,7 +132,7 @@ function seed() {
   });
 
   run();
-  console.log(`Seeded: ${USERS.length} users, ${ORDERS.length} orders (Monday delivery only, no vouchers)`);
+  console.log(`Seeded: ${CROPS.length} crops, ${USERS.length} users, ${ORDERS.length} orders (Monday delivery only, no vouchers)`);
 }
 
 seed();

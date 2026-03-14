@@ -11,6 +11,7 @@ import { OrderBookView } from '@/components/order-book/order-book-view';
 import { OrderForm } from '@/components/order-book/order-form';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
+import { CropNameLink } from '@/components/crop-name-link';
 import { formatDeliveryDate, getDefaultDeliveryDate, isMonday } from '@/lib/format';
 import Link from 'next/link';
 
@@ -116,15 +117,20 @@ export default function ExplorePage() {
               ) : (
                 filteredCrops.map((crop) => (
                   <li key={crop}>
-                    <Link
-                      href={`/explore?crop=${crop}`}
-                      className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 active:bg-muted-bg/50 transition-colors min-h-[3.25rem] touch-manipulation"
-                    >
-                      <span className="font-medium text-foreground">{CROP_LABELS[crop]}</span>
-                      <span className="text-muted text-sm">
+                    <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 min-h-[3.25rem]">
+                      <CropNameLink
+                        cropName={CROP_LABELS[crop]}
+                        className="font-medium text-foreground hover:text-primary hover:underline"
+                      >
+                        {CROP_LABELS[crop]}
+                      </CropNameLink>
+                      <Link
+                        href={`/explore?crop=${crop}`}
+                        className="text-muted text-sm hover:text-foreground"
+                      >
                         {isWatched(crop) ? 'On watchlist' : 'View orders'}
-                      </span>
-                    </Link>
+                      </Link>
+                    </div>
                   </li>
                 ))
               )}
@@ -148,9 +154,12 @@ export default function ExplorePage() {
                 ← All crops
               </button>
               <span className="text-muted">·</span>
-              <span className="text-sm font-medium text-foreground truncate">
+              <CropNameLink
+                cropName={CROP_LABELS[selectedCrop as CropType]}
+                className="text-sm font-medium text-foreground truncate hover:text-primary hover:underline"
+              >
                 {CROP_LABELS[selectedCrop as CropType]}
-              </span>
+              </CropNameLink>
               <Button
                 onClick={() => setShowForm(true)}
                 size="sm"
@@ -203,7 +212,14 @@ export default function ExplorePage() {
           ) : (
             <div className="flex-1 overflow-auto px-4 sm:px-6 py-4">
               <p className="text-muted text-sm">
-                Select a delivery date (Monday) to see the order book for {CROP_LABELS[selectedCrop as CropType]}.
+                Select a delivery date (Monday) to see the order book for{' '}
+                <CropNameLink
+                  cropName={CROP_LABELS[selectedCrop as CropType]}
+                  className="font-medium text-foreground hover:text-primary hover:underline"
+                >
+                  {CROP_LABELS[selectedCrop as CropType]}
+                </CropNameLink>
+                .
               </p>
             </div>
           )}
