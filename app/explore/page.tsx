@@ -52,18 +52,24 @@ export default function ExplorePage() {
     [ordersForDefault]
   );
 
+  const ordersMatchCrop = useMemo(
+    () => ordersForDefault.length > 0 && ordersForDefault[0].crop_type === selectedCrop,
+    [ordersForDefault, selectedCrop]
+  );
+
   const datesWithOrders = useMemo(() => {
+    if (!ordersMatchCrop) return [];
     const dates = [...new Set(ordersForDefault.map((o) => o.delivery_date).filter(isMonday))].filter(
       (d) => d >= new Date().toISOString().slice(0, 10)
     ).sort();
     return dates;
-  }, [ordersForDefault]);
+  }, [ordersForDefault, ordersMatchCrop]);
 
   useEffect(() => {
-    if (selectedCrop && !deliveryDate && defaultMonday) {
+    if (selectedCrop && !deliveryDate && defaultMonday && ordersMatchCrop) {
       setDeliveryDate(defaultMonday);
     }
-  }, [selectedCrop, deliveryDate, defaultMonday]);
+  }, [selectedCrop, deliveryDate, defaultMonday, ordersMatchCrop]);
 
   useEffect(() => {
     if (deliveryDate && selectedDateRef.current && dateStripRef.current) {
@@ -164,27 +170,31 @@ export default function ExplorePage() {
               className="overflow-x-auto border-t border-border bg-muted-bg/30 scrollbar-thin"
               style={{ scrollbarWidth: 'thin' }}
             >
-              <div className="flex gap-0 min-w-max px-4 sm:px-6 py-1">
-                {(datesWithOrders.length > 0 ? datesWithOrders : (defaultMonday ? [defaultMonday] : [])).map((date) => {
-                  const selected = date === deliveryDate;
-                  return (
-                    <button
-                      key={date}
-                      ref={selected ? selectedDateRef : null}
-                      type="button"
-                      onClick={() => setDeliveryDate(date)}
-                      className={`
-                        shrink-0 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-200
-                        border-b-2 -mb-px touch-manipulation
-                        ${selected
-                          ? 'text-primary border-primary'
-                          : 'text-muted border-transparent hover:text-foreground'}
-                      `}
-                    >
-                      {formatDeliveryDate(date)}
-                    </button>
-                  );
-                })}
+              <div className="flex gap-0 min-w-max px-4 sm:px-6 py-1 items-center">
+                {!ordersMatchCrop ? (
+                  <span className="text-sm text-muted py-2">Loading dates…</span>
+                ) : (
+                  (datesWithOrders.length > 0 ? datesWithOrders : (defaultMonday ? [defaultMonday] : [])).map((date) => {
+                    const selected = date === deliveryDate;
+                    return (
+                      <button
+                        key={date}
+                        ref={selected ? selectedDateRef : null}
+                        type="button"
+                        onClick={() => setDeliveryDate(date)}
+                        className={`
+                          shrink-0 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-200
+                          border-b-2 -mb-px touch-manipulation
+                          ${selected
+                            ? 'text-primary border-primary'
+                            : 'text-muted border-transparent hover:text-foreground'}
+                        `}
+                      >
+                        {formatDeliveryDate(date)}
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>

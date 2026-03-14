@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { Search, Package } from 'lucide-react';
 import { Order } from '@/shared/types';
@@ -11,7 +11,10 @@ import { useOrders } from '@/hooks/use-orders';
 import { CropSearchModal } from '@/components/crop-search-modal';
 import { formatPrice, formatDeliveryDate, formatKg } from '@/lib/format';
 import { computeCropPreviews } from '@/lib/crop-previews';
+import { isSeller, isBuyer } from '@/lib/order-role';
+import { api } from '@/lib/api-client';
 import { CropType } from '@/shared/types';
+import { Button } from '@/components/ui/button';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -21,10 +24,21 @@ export default function DashboardPage() {
   const [searchOpen, setSearchOpen] = useState(false);
 
   const { orders, loading } = useOrders({ status: 'OPEN' });
-  const { orders: filledOrders, loading: deliveriesLoading } = useOrders({
+  const { orders: filledByMe, loading: loadingFilledByMe, refetch: refetchFilledByMe } = useOrders({
     status: 'FILLED',
     filled_by: user?.id ?? undefined,
   });
+  const { orders: createdByMeFilled, loading: loadingCreatedByMe, refetch: refetchCreatedByMe } = useOrders({
+    status: 'FILLED',
+    creator_id: user?.id ?? undefined,
+  });
+
+  const refreshDeliveries = useCallback(() => {
+    refetchFilledByMe();
+    refetchCreatedByMe();
+  }, [refetchFilledByMe, refetchCreatedByMe]);
+
+  const [escrowLoading, setEscrowLoading] = useState<string | null>(null);
 
   const [previews, setPreviews] = useState<ReturnType<typeof computeCropPreviews>>([]);
 
@@ -36,12 +50,20 @@ export default function DashboardPage() {
 
   const upcomingDeliveries = useMemo(() => {
     const cutoff = today();
-    return filledOrders
+    const seen = new Set<string>();
+    const merged = [...filledByMe, ...createdByMeFilled].filter((o) => {
+      if (seen.has(o.id)) return false;
+      seen.add(o.id);
+      return true;
+    });
+    return merged
       .filter((o) => o.delivery_date >= cutoff)
       .sort((a, b) => a.delivery_date.localeCompare(b.delivery_date));
-  }, [filledOrders]);
+  }, [filledByMe, createdByMeFilled]);
 
-  const isFarmer = user?.role === 'FARMER';
+  const deliveriesLoading = loadingFilledByMe || loadingCreatedByMe;
+
+  const isFarmer = user?.is_farmer;
   const displayCrops = watched;
 
   if (loading) {
@@ -74,37 +96,116 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Upcoming deliveries: orders you bought (filled a sell order) */}
-      {upcomingDeliveries.length > 0 && (
+      {/* Upcoming deliveries: as seller (delivering, getting paid) or buyer (receiving, paying) */}
+      {upcomingDeliveries.length > 0 && user && (
         <section className="border-b border-border">
           <div className="px-4 sm:px-6 py-3 flex items-center gap-2">
             <Package className="w-5 h-5 text-muted" aria-hidden />
             <div>
               <h2 className="text-base font-semibold text-foreground">Upcoming deliveries</h2>
-              <p className="text-xs text-muted mt-0.5">Quantity you’re receiving and amount to pay</p>
+              <p className="text-xs text-muted mt-0.5">Delivering (you get paid) or receiving (you pay)</p>
             </div>
           </div>
           <ul className="divide-y divide-border">
             {upcomingDeliveries.map((order) => {
               const total = order.quantity * order.price;
+              const delivering = isSeller(order, user.id);
+              const asBuyer = isBuyer(order, user.id);
+              const asSeller = delivering;
+              const loadingThis = escrowLoading === order.id;
+              const runEscrow = async (action: 'fund' | 'deliver' | 'confirm' | 'contest' | 'resolve', resolution?: 'release' | 'refund') => {
+                setEscrowLoading(order.id);
+                try {
+                  if (action === 'resolve') {
+                    await api.post(`/api/orders/${order.id}/escrow/resolve`, { resolution: resolution ?? 'release' });
+                  } else {
+                    await api.post(`/api/orders/${order.id}/escrow/${action}`);
+                  }
+                  refreshDeliveries();
+                } finally {
+                  setEscrowLoading(null);
+                }
+              };
               return (
                 <li key={order.id}>
-                  <div className="px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3 min-h-[3.25rem]">
-                    <div className="min-w-0">
-                      <div className="font-medium text-foreground">
-                        {CROP_LABELS[order.crop_type as CropType]}
+                  <div className="px-4 sm:px-6 py-3.5">
+                    <div className="flex items-center justify-between gap-3 min-h-[3.25rem]">
+                      <div className="min-w-0">
+                        <div className="font-medium text-foreground">
+                          {CROP_LABELS[order.crop_type as CropType]}
+                        </div>
+                        <div className="text-xs text-muted mt-0.5">
+                          {formatDeliveryDate(order.delivery_date)}
+                          {delivering
+                            ? ` · Delivering ${formatKg(order.quantity)}`
+                            : ` · Receiving ${formatKg(order.quantity)}`}
+                        </div>
                       </div>
-                      <div className="text-xs text-muted mt-0.5">
-                        {formatDeliveryDate(order.delivery_date)} · Receiving {formatKg(order.quantity)}
+                      <div className="shrink-0 text-right">
+                        <div className="font-data font-semibold text-foreground">
+                          {delivering
+                            ? `${formatPrice(total)} to receive`
+                            : `${formatPrice(total)} to pay`}
+                        </div>
+                        <div className="text-xs text-muted">
+                          {formatPrice(order.price)}/kg
+                        </div>
                       </div>
                     </div>
-                    <div className="shrink-0 text-right">
-                      <div className="font-data font-semibold text-foreground">
-                        {formatPrice(total)} to pay
-                      </div>
-                      <div className="text-xs text-muted">
-                        {formatPrice(order.price)}/kg
-                      </div>
+                    {/* Escrow status and actions */}
+                    <div className="mt-2 pt-2 border-t border-border/60 flex flex-wrap items-center gap-2 text-xs">
+                      {order.funds_released_at && (
+                        <span className="text-muted">Funds released</span>
+                      )}
+                      {order.contested_at && !order.funds_released_at && (
+                        <>
+                          <span className="text-accent-red">Contested – under review</span>
+                          <Button size="sm" variant="outline" disabled={loadingThis} onClick={() => runEscrow('resolve', 'release')}>
+                            Resolve (release to seller)
+                          </Button>
+                          <Button size="sm" variant="outline" disabled={loadingThis} onClick={() => runEscrow('resolve', 'refund')}>
+                            Resolve (refund buyer)
+                          </Button>
+                        </>
+                      )}
+                      {!order.funds_released_at && !order.contested_at && asBuyer && (
+                        <>
+                          {!order.escrow_funded_at && (
+                            <Button size="sm" disabled={loadingThis} onClick={() => runEscrow('fund')}>
+                              Fund escrow ({formatPrice(total)})
+                            </Button>
+                          )}
+                          {order.escrow_funded_at && !order.delivered_at && (
+                            <span className="text-muted">Waiting for seller to deliver</span>
+                          )}
+                          {order.delivered_at && (
+                            <>
+                              <Button size="sm" disabled={loadingThis} onClick={() => runEscrow('confirm')}>
+                                Confirm receipt
+                              </Button>
+                              <Button size="sm" variant="outline" disabled={loadingThis} onClick={() => runEscrow('contest')}>
+                                Contest
+                              </Button>
+                              <span className="text-muted">Auto-releases in 2 days if no action</span>
+                            </>
+                          )}
+                        </>
+                      )}
+                      {!order.funds_released_at && !order.contested_at && asSeller && (
+                        <>
+                          {!order.escrow_funded_at && (
+                            <span className="text-muted">Waiting for buyer to fund escrow</span>
+                          )}
+                          {order.escrow_funded_at && !order.delivered_at && (
+                            <Button size="sm" disabled={loadingThis} onClick={() => runEscrow('deliver')}>
+                              Mark as delivered
+                            </Button>
+                          )}
+                          {order.delivered_at && (
+                            <span className="text-muted">Delivery attested · waiting for buyer or 2-day auto-release</span>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                 </li>

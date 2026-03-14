@@ -36,7 +36,7 @@ export function OrderForm({ onSuccess, defaultCrop, defaultType, defaultQuantity
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const canCreateAsk = user?.role === 'FARMER' && user?.is_verified;
+  const canCreateAsk = user?.is_farmer && user?.is_verified;
   const kg = parseInt(quantityKg, 10) || 0;
   const price = parseFloat(pricePerKg) || 0;
   const totalValue = kg > 0 && price > 0 ? kg * price : 0;

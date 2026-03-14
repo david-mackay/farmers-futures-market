@@ -1,9 +1,12 @@
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   address TEXT UNIQUE NOT NULL,
+  email TEXT,
   display_name TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('FARMER', 'TRADER')),
+  is_farmer INTEGER NOT NULL DEFAULT 0,
   is_verified INTEGER NOT NULL DEFAULT 0,
+  verification_submitted_at TEXT,
   delivery_address TEXT,
   acreage REAL,
   crops_produced TEXT,
@@ -21,6 +24,10 @@ CREATE TABLE IF NOT EXISTS orders (
   status TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'FILLED', 'CANCELLED')),
   filled_by TEXT REFERENCES users(id),
   filled_at TEXT,
+  escrow_funded_at TEXT,
+  delivered_at TEXT,
+  contested_at TEXT,
+  funds_released_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

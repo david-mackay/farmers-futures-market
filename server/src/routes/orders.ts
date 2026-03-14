@@ -46,6 +46,42 @@ export function createOrdersRouter(io: SocketServer) {
     res.json({ order: result.order, voucher: result.voucher });
   });
 
+  // Escrow: buyer funds (places money in escrow)
+  router.post('/:id/escrow/fund', requireAuth, (req: AuthRequest, res) => {
+    const result = orderService.fundEscrow(req.userId!, req.params.id);
+    if (result.error) { res.status(400).json({ error: result.error }); return; }
+    res.json(result.order);
+  });
+
+  // Escrow: seller attests delivery
+  router.post('/:id/escrow/deliver', requireAuth, (req: AuthRequest, res) => {
+    const result = orderService.attestDelivery(req.userId!, req.params.id);
+    if (result.error) { res.status(400).json({ error: result.error }); return; }
+    res.json(result.order);
+  });
+
+  // Escrow: buyer confirms receipt (releases funds to seller)
+  router.post('/:id/escrow/confirm', requireAuth, (req: AuthRequest, res) => {
+    const result = orderService.confirmReceipt(req.userId!, req.params.id);
+    if (result.error) { res.status(400).json({ error: result.error }); return; }
+    res.json(result.order);
+  });
+
+  // Escrow: buyer contests delivery (dispute)
+  router.post('/:id/escrow/contest', requireAuth, (req: AuthRequest, res) => {
+    const result = orderService.contestDelivery(req.userId!, req.params.id);
+    if (result.error) { res.status(400).json({ error: result.error }); return; }
+    res.json(result.order);
+  });
+
+  // Escrow: platform resolves dispute (release to seller or refund)
+  router.post('/:id/escrow/resolve', requireAuth, (req: AuthRequest, res) => {
+    const resolution = (req.body?.resolution === 'refund') ? 'refund' : 'release';
+    const result = orderService.resolveDispute(req.params.id, resolution);
+    if (result.error) { res.status(400).json({ error: result.error }); return; }
+    res.json(result.order);
+  });
+
   // Cancel order
   router.delete('/:id', requireAuth, (req: AuthRequest, res) => {
     const result = orderService.cancelOrder(req.userId!, req.params.id);

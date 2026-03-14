@@ -32,7 +32,7 @@ function HedgeFlowContent() {
   const [posted, setPosted] = useState(false);
   const [error, setError] = useState('');
 
-  const isVerifiedFarmer = user?.role === 'FARMER' && user?.is_verified;
+  const isVerifiedFarmer = user?.is_farmer && user?.is_verified;
 
   const calculateYield = async () => {
     if (!cropType || !acreage || parseFloat(acreage) <= 0) return;

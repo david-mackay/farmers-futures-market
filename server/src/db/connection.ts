@@ -23,6 +23,13 @@ const migrations = [
   'ALTER TABLE users ADD COLUMN delivery_address TEXT',
   'ALTER TABLE users ADD COLUMN acreage REAL',
   'ALTER TABLE users ADD COLUMN crops_produced TEXT',
+  'ALTER TABLE users ADD COLUMN email TEXT',
+  'ALTER TABLE users ADD COLUMN is_farmer INTEGER NOT NULL DEFAULT 0',
+  'ALTER TABLE users ADD COLUMN verification_submitted_at TEXT',
+  'ALTER TABLE orders ADD COLUMN escrow_funded_at TEXT',
+  'ALTER TABLE orders ADD COLUMN delivered_at TEXT',
+  'ALTER TABLE orders ADD COLUMN contested_at TEXT',
+  'ALTER TABLE orders ADD COLUMN funds_released_at TEXT',
 ];
 for (const sql of migrations) {
   try {

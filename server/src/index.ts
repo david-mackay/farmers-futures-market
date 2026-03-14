@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
 import cors from 'cors';
 import { authMiddleware } from './middleware/auth';
+import { createAuthRouter } from './routes/auth';
 import { createOrdersRouter } from './routes/orders';
 import { createUsersRouter } from './routes/users';
 import { createAnalyticsRouter } from './routes/analytics';
@@ -27,6 +28,7 @@ app.use(express.json());
 app.use(authMiddleware);
 
 // Routes
+app.use('/api/auth', createAuthRouter());
 app.use('/api/orders', createOrdersRouter(io));
 app.use('/api/users', createUsersRouter());
 app.use('/api/analytics', createAnalyticsRouter());
