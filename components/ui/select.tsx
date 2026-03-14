@@ -21,8 +21,10 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           id={selectId}
           className={`
             w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-border bg-card
-            text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary
-            disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer
+            text-foreground transition-colors duration-200 cursor-pointer
+            focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50
+            disabled:opacity-50 disabled:cursor-not-allowed
             ${className}
           `}
           {...props}

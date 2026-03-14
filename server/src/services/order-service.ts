@@ -18,6 +18,7 @@ export interface OrderFilters {
   delivery_date?: string;
   delivery_month?: string;
   creator_id?: string;
+  filled_by?: string;
 }
 
 export function getOrders(filters: OrderFilters = {}): Order[] {
@@ -30,6 +31,7 @@ export function getOrders(filters: OrderFilters = {}): Order[] {
   if (filters.delivery_date) { sql += ' AND delivery_date = ?'; params.push(filters.delivery_date); }
   if (filters.delivery_month) { sql += " AND strftime('%Y-%m', delivery_date) = ?"; params.push(filters.delivery_month); }
   if (filters.creator_id) { sql += ' AND creator_id = ?'; params.push(filters.creator_id); }
+  if (filters.filled_by) { sql += ' AND filled_by = ?'; params.push(filters.filled_by); }
 
   sql += ' ORDER BY created_at DESC';
   return (db.prepare(sql).all(...params) as any[]).map(rowToOrder);

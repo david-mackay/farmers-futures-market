@@ -10,6 +10,8 @@ interface UseOrdersOptions {
   type?: string;
   status?: string;
   delivery_month?: string;
+  delivery_date?: string;
+  filled_by?: string;
 }
 
 export function useOrders(options: UseOrdersOptions = {}) {
@@ -26,6 +28,8 @@ export function useOrders(options: UseOrdersOptions = {}) {
       if (options.type) params.set('type', options.type);
       if (options.status) params.set('status', options.status);
       if (options.delivery_month) params.set('delivery_month', options.delivery_month);
+      if (options.delivery_date) params.set('delivery_date', options.delivery_date);
+      if (options.filled_by) params.set('filled_by', options.filled_by);
       const qs = params.toString();
       const data = await api.get<Order[]>(`/api/orders${qs ? `?${qs}` : ''}`);
       setOrders(data);
@@ -34,7 +38,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
     } finally {
       setLoading(false);
     }
-  }, [options.crop_type, options.type, options.status, options.delivery_month]);
+  }, [options.crop_type, options.type, options.status, options.delivery_month, options.delivery_date, options.filled_by]);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 

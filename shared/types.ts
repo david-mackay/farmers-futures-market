@@ -31,6 +31,12 @@ export interface User {
   display_name: string;
   role: UserRole;
   is_verified: boolean;
+  /** Delivery address for buyers (wholesale). */
+  delivery_address?: string | null;
+  /** Farmer: total acreage. */
+  acreage?: number | null;
+  /** Farmer: crop types produced (e.g. "WHEAT,CORN"). */
+  crops_produced?: string | null;
   created_at: string;
 }
 

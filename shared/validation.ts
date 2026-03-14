@@ -28,4 +28,7 @@ export const updateUserSchema = z.object({
   display_name: z.string().min(1).max(100).optional(),
   role: z.enum(['FARMER', 'TRADER']).optional(),
   is_verified: z.boolean().optional(),
+  delivery_address: z.string().max(500).nullable().optional(),
+  acreage: z.number().nonnegative().nullable().optional(),
+  crops_produced: z.string().max(500).nullable().optional(),
 });

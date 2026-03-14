@@ -44,5 +44,5 @@ export const CROP_EMOJI: Record<CropType, string> = {
   [CropType.STRAWBERRIES]: '',
 };
 
-// Every contract is a standardized lot of 100 units
-export const LOT_SIZE = 100;
+/** All orders use price per kg and quantity in kg (no standardized lots). */
+export const PRICE_PER_KG_LABEL = 'per kg';

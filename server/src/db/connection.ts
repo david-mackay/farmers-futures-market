@@ -18,4 +18,18 @@ const schemaPath = path.join(__dirname, 'schema.sql');
 const schema = fs.readFileSync(schemaPath, 'utf-8');
 db.exec(schema);
 
+// Idempotent migrations for existing DBs (ignore if column exists)
+const migrations = [
+  'ALTER TABLE users ADD COLUMN delivery_address TEXT',
+  'ALTER TABLE users ADD COLUMN acreage REAL',
+  'ALTER TABLE users ADD COLUMN crops_produced TEXT',
+];
+for (const sql of migrations) {
+  try {
+    db.exec(sql);
+  } catch (_) {
+    // Column already exists or table structure differs
+  }
+}
+
 export default db;

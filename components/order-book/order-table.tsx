@@ -4,7 +4,7 @@ import { Order, OrderStatus } from '@/shared/types';
 import { Badge } from '@/components/ui/badge';
 import { TransactButton } from '@/components/transact-button';
 import { useUser } from '@/hooks/use-user';
-import { formatPrice, formatQuantity, formatDeliveryDate, cropLabel } from '@/lib/format';
+import { formatPrice, formatKg, formatDeliveryDate, cropLabel } from '@/lib/format';
 
 interface OrderTableProps {
   orders: Order[];
@@ -29,8 +29,8 @@ export function OrderTable({ orders, onOrderUpdate }: OrderTableProps) {
           <tr className="border-b border-border text-left">
             <th className="pb-3 text-xs font-bold uppercase tracking-wider text-muted">Crop</th>
             <th className="pb-3 text-xs font-bold uppercase tracking-wider text-muted">Type</th>
-            <th className="pb-3 text-xs font-bold uppercase tracking-wider text-muted">Price</th>
-            <th className="pb-3 text-xs font-bold uppercase tracking-wider text-muted">Quantity</th>
+            <th className="pb-3 text-xs font-bold uppercase tracking-wider text-muted">Price/kg</th>
+            <th className="pb-3 text-xs font-bold uppercase tracking-wider text-muted">Kg</th>
             <th className="pb-3 text-xs font-bold uppercase tracking-wider text-muted">Delivery</th>
             <th className="pb-3 text-xs font-bold uppercase tracking-wider text-muted">Status</th>
             <th className="pb-3 text-xs font-bold uppercase tracking-wider text-muted">Action</th>
@@ -45,8 +45,8 @@ export function OrderTable({ orders, onOrderUpdate }: OrderTableProps) {
                   {order.type === 'BID' ? 'BUY' : 'SELL'}
                 </Badge>
               </td>
-              <td className="py-3 font-data font-semibold">{formatPrice(order.price)}</td>
-              <td className="py-3 font-data">{formatQuantity(order.quantity, order.crop_type)}</td>
+              <td className="py-3 font-data font-semibold">{formatPrice(order.price)}/kg</td>
+              <td className="py-3 font-data">{formatKg(order.quantity)}</td>
               <td className="py-3 font-medium text-primary">{formatDeliveryDate(order.delivery_date)}</td>
               <td className="py-3">
                 <Badge variant={order.status.toLowerCase() as any}>{order.status}</Badge>

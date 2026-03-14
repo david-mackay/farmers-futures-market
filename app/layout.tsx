@@ -18,13 +18,27 @@ export const metadata: Metadata = {
   description: "A Farmers' Futures Trading Post — plan your harvest by viewing buy/sell orders for crop delivery dates.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem('ffm:theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);})();`,
+          }}
+        />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Providers>
           {children}

@@ -3,7 +3,13 @@ import { v4 as uuid } from 'uuid';
 import { User, UserRole } from '../../../shared/types';
 
 function rowToUser(row: any): User {
-  return { ...row, is_verified: !!row.is_verified };
+  return {
+    ...row,
+    is_verified: !!row.is_verified,
+    delivery_address: row.delivery_address ?? null,
+    acreage: row.acreage ?? null,
+    crops_produced: row.crops_produced ?? null,
+  };
 }
 
 export function getUserById(id: string): User | undefined {
@@ -19,7 +25,17 @@ export function createUser(address: string, displayName: string, role: UserRole)
   return getUserById(id)!;
 }
 
-export function updateUser(id: string, updates: { display_name?: string; role?: string; is_verified?: boolean }): User | undefined {
+export function updateUser(
+  id: string,
+  updates: {
+    display_name?: string;
+    role?: string;
+    is_verified?: boolean;
+    delivery_address?: string | null;
+    acreage?: number | null;
+    crops_produced?: string | null;
+  }
+): User | undefined {
   const user = getUserById(id);
   if (!user) return undefined;
 
@@ -31,6 +47,15 @@ export function updateUser(id: string, updates: { display_name?: string; role?: 
   }
   if (updates.is_verified !== undefined) {
     db.prepare('UPDATE users SET is_verified = ? WHERE id = ?').run(updates.is_verified ? 1 : 0, id);
+  }
+  if (updates.delivery_address !== undefined) {
+    db.prepare('UPDATE users SET delivery_address = ? WHERE id = ?').run(updates.delivery_address ?? null, id);
+  }
+  if (updates.acreage !== undefined) {
+    db.prepare('UPDATE users SET acreage = ? WHERE id = ?').run(updates.acreage ?? null, id);
+  }
+  if (updates.crops_produced !== undefined) {
+    db.prepare('UPDATE users SET crops_produced = ? WHERE id = ?').run(updates.crops_produced ?? null, id);
   }
 
   return getUserById(id)!;

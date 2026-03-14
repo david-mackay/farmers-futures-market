@@ -1,41 +1,45 @@
 'use client';
 
 import { useState } from 'react';
+import { Calendar } from 'lucide-react';
 import { CropType, OrderType } from '@/shared/types';
-import { CROP_LABELS, LOT_SIZE, CROP_UNIT } from '@/shared/constants';
+import { CROP_LABELS } from '@/shared/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { DeliveryDateModal } from '@/components/delivery-date-modal';
 import { useUser } from '@/hooks/use-user';
 import { useDevMode } from '@/hooks/use-dev-mode';
 import { api } from '@/lib/api-client';
-import { formatPrice } from '@/lib/format';
+import { formatPrice, formatDeliveryDate, getNextMondays } from '@/lib/format';
 
 interface OrderFormProps {
   onSuccess?: () => void;
   defaultCrop?: CropType;
   defaultType?: OrderType;
-  defaultLots?: number;
-  defaultPrice?: number;
+  defaultQuantityKg?: number;
+  defaultPricePerKg?: number;
   defaultDeliveryDate?: string;
 }
 
 const cropOptions = Object.entries(CROP_LABELS).map(([value, label]) => ({ value, label }));
 
-export function OrderForm({ onSuccess, defaultCrop, defaultType, defaultLots, defaultPrice, defaultDeliveryDate }: OrderFormProps) {
+export function OrderForm({ onSuccess, defaultCrop, defaultType, defaultQuantityKg, defaultPricePerKg, defaultDeliveryDate }: OrderFormProps) {
   const { user } = useUser();
   const devMode = useDevMode();
   const [cropType, setCropType] = useState(defaultCrop || '');
   const [orderType, setOrderType] = useState<string>(defaultType || OrderType.BID);
-  const [price, setPrice] = useState(defaultPrice?.toString() || '');
-  const [lots, setLots] = useState(defaultLots?.toString() || '');
-  const [deliveryDate, setDeliveryDate] = useState(defaultDeliveryDate || '');
+  const [pricePerKg, setPricePerKg] = useState(defaultPricePerKg?.toString() || '');
+  const [quantityKg, setQuantityKg] = useState(defaultQuantityKg?.toString() || '');
+  const [deliveryDate, setDeliveryDate] = useState(defaultDeliveryDate || getNextMondays(1)[0] || '');
+  const [showDateModal, setShowDateModal] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const canCreateAsk = user?.role === 'FARMER' && user?.is_verified;
-  const unit = cropType ? CROP_UNIT[cropType as CropType] : 'units';
-  const totalUnits = (parseInt(lots) || 0) * LOT_SIZE;
+  const kg = parseInt(quantityKg, 10) || 0;
+  const price = parseFloat(pricePerKg) || 0;
+  const totalValue = kg > 0 && price > 0 ? kg * price : 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,14 +54,14 @@ export function OrderForm({ onSuccess, defaultCrop, defaultType, defaultLots, de
       await api.post('/api/orders', {
         crop_type: cropType,
         type: orderType,
-        price: parseFloat(price),
-        quantity: parseInt(lots),
+        price: parseFloat(pricePerKg),
+        quantity: parseInt(quantityKg, 10),
         delivery_date: deliveryDate,
       });
-      setCropType(defaultCrop || '');
-      setPrice(defaultPrice?.toString() || '');
-      setLots(defaultLots?.toString() || '');
-      setDeliveryDate(defaultDeliveryDate || '');
+      setCropType(defaultCrop ?? '');
+      setPricePerKg(defaultPricePerKg?.toString() ?? '');
+      setQuantityKg(defaultQuantityKg?.toString() ?? '');
+      setDeliveryDate(defaultDeliveryDate ?? '');
       onSuccess?.();
     } catch (err: any) {
       setError(err.message);
@@ -73,7 +77,7 @@ export function OrderForm({ onSuccess, defaultCrop, defaultType, defaultLots, de
         <button
           type="button"
           onClick={() => setOrderType(OrderType.BID)}
-          className={`flex-1 py-3 text-sm font-semibold transition-colors cursor-pointer ${
+          className={`flex-1 py-3 text-sm font-semibold transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset ${
             orderType === OrderType.BID
               ? 'bg-primary text-white'
               : 'bg-card text-muted hover:bg-muted-bg'
@@ -85,7 +89,7 @@ export function OrderForm({ onSuccess, defaultCrop, defaultType, defaultLots, de
           type="button"
           onClick={() => canCreateAsk ? setOrderType(OrderType.ASK) : null}
           disabled={!canCreateAsk}
-          className={`flex-1 py-3 text-sm font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+          className={`flex-1 py-3 text-sm font-semibold transition-colors duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset ${
             orderType === OrderType.ASK
               ? 'bg-accent-red text-white'
               : 'bg-card text-muted hover:bg-muted-bg'
@@ -107,40 +111,49 @@ export function OrderForm({ onSuccess, defaultCrop, defaultType, defaultLots, de
       />
 
       <Input
-        label={`Price per ${unit}`}
+        label="Price per kg (J$/kg)"
         type="number"
         step="0.01"
         min="0.01"
-        value={price}
-        onChange={(e) => setPrice(e.target.value)}
+        value={pricePerKg}
+        onChange={(e) => setPricePerKg(e.target.value)}
         placeholder="e.g. 7.50"
         required
       />
 
       <div>
         <Input
-          label={`How many lots? (1 lot = ${LOT_SIZE} ${unit})`}
+          label="Quantity (kg)"
           type="number"
           min="1"
-          value={lots}
-          onChange={(e) => setLots(e.target.value)}
-          placeholder="e.g. 5"
+          value={quantityKg}
+          onChange={(e) => setQuantityKg(e.target.value)}
+          placeholder="e.g. 500"
           required
         />
-        {totalUnits > 0 && (
+        {totalValue > 0 && (
           <p className="text-xs text-muted mt-1">
-            Total: {totalUnits.toLocaleString()} {unit}
-            {price && ` | Contract value: ${formatPrice(totalUnits * parseFloat(price))}`}
+            Total value: {formatPrice(totalValue)}
           </p>
         )}
       </div>
 
-      <Input
-        label="Delivery date"
-        type="date"
-        value={deliveryDate}
-        onChange={(e) => setDeliveryDate(e.target.value)}
-        required
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-1">Delivery date (Monday)</label>
+        <button
+          type="button"
+          onClick={() => setShowDateModal(true)}
+          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-left hover:bg-muted-bg transition-colors"
+        >
+          <Calendar className="w-4 h-4 text-muted" aria-hidden />
+          {deliveryDate ? formatDeliveryDate(deliveryDate) : 'Select Monday'}
+        </button>
+      </div>
+      <DeliveryDateModal
+        open={showDateModal}
+        onClose={() => setShowDateModal(false)}
+        selectedDate={deliveryDate}
+        onSelect={(date) => setDeliveryDate(date)}
       />
 
       {error && (

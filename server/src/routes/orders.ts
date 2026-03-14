@@ -17,6 +17,7 @@ export function createOrdersRouter(io: SocketServer) {
       delivery_date: req.query.delivery_date as string | undefined,
       delivery_month: req.query.delivery_month as string | undefined,
       creator_id: req.query.creator_id as string | undefined,
+      filled_by: req.query.filled_by as string | undefined,
     };
     const orders = orderService.getOrders(filters);
     res.json(orders);

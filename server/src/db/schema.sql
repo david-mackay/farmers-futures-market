@@ -4,6 +4,9 @@ CREATE TABLE IF NOT EXISTS users (
   display_name TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('FARMER', 'TRADER')),
   is_verified INTEGER NOT NULL DEFAULT 0,
+  delivery_address TEXT,
+  acreage REAL,
+  crops_produced TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

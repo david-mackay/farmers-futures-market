@@ -27,21 +27,25 @@ export function DeliveryDateFilter({ value, onChange }: DeliveryDateFilterProps)
       </label>
       <div className="flex flex-wrap gap-2">
         <button
+          type="button"
           onClick={() => onChange('')}
           className={`
-            px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] cursor-pointer
-            ${!value ? 'bg-primary text-white' : 'bg-muted-bg text-muted hover:bg-border'}
+            px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 min-h-[44px] cursor-pointer
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2
+            ${!value ? 'bg-primary text-white' : 'bg-muted-bg text-muted hover:bg-border hover:text-foreground'}
           `}
         >
           All Dates
         </button>
         {months.map(m => (
           <button
+            type="button"
             key={m.value}
             onClick={() => onChange(m.value)}
             className={`
-              px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] cursor-pointer
-              ${value === m.value ? 'bg-primary text-white' : 'bg-muted-bg text-muted hover:bg-border'}
+              px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 min-h-[44px] cursor-pointer
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2
+              ${value === m.value ? 'bg-primary text-white' : 'bg-muted-bg text-muted hover:bg-border hover:text-foreground'}
             `}
           >
             {m.label.split(' ')[0]} {/* Just month name, abbreviated via slice */}
