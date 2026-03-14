@@ -1,26 +1,74 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #F6F7ED;
+  --foreground: #001F3F;
+  --primary: #00804C;
+  --primary-light: #74C365;
+  --primary-dark: #006B3F;
+  --secondary: #DBE64C;
+  --secondary-light: #E4ED70;
+  --secondary-dark: #C2CC30;
+  --accent-red: #EF3340;
+  --accent-red-light: #F4565F;
+  --accent-blue: #1E488F;
+  --accent-blue-light: #2E5CA8;
+  --muted: #5A6B5A;
+  --muted-bg: #ECEDe3;
+  --border: #D4D6C8;
+  --card: #FFFFFF;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --color-primary-dark: var(--primary-dark);
+  --color-secondary: var(--secondary);
+  --color-secondary-light: var(--secondary-light);
+  --color-secondary-dark: var(--secondary-dark);
+  --color-accent-red: var(--accent-red);
+  --color-accent-red-light: var(--accent-red-light);
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-blue-light: var(--accent-blue-light);
+  --color-muted: var(--muted);
+  --color-muted-bg: var(--muted-bg);
+  --color-border: var(--border);
+  --color-card: var(--card);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0A1628;
+    --foreground: #F6F7ED;
+    --primary: #74C365;
+    --primary-light: #8FD47E;
+    --primary-dark: #00804C;
+    --secondary: #DBE64C;
+    --secondary-light: #E4ED70;
+    --secondary-dark: #C2CC30;
+    --accent-red: #F4565F;
+    --accent-red-light: #F77A81;
+    --accent-blue: #3B6BC4;
+    --accent-blue-light: #5580D0;
+    --muted: #8A9B8A;
+    --muted-bg: #152035;
+    --border: #253550;
+    --card: #0F1F38;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Monospace for financial data */
+.font-data {
+  font-family: var(--font-geist-mono), 'Courier New', monospace;
+  font-variant-numeric: tabular-nums;
 }

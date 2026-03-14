@@ -3,15 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently \"next dev\" \"cd server && npm run dev\"",
+    "dev:next": "next dev",
+    "dev:server": "cd server && npm run dev",
     "build": "next build",
     "start": "next start",
+    "seed": "cd server && npm run seed",
     "lint": "eslint"
   },
   "dependencies": {
+    "concurrently": "^9.2.1",
     "next": "16.1.6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "socket.io-client": "^4.8.3",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
