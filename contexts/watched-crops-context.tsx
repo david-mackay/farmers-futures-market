@@ -9,13 +9,18 @@ import {
   type ReactNode,
 } from 'react';
 import { CropType } from '@/shared/types';
+import { useUser } from '@/hooks/use-user';
 
-const STORAGE_KEY = 'ffm:watchedCrops';
+const STORAGE_KEY_PREFIX = 'ffm:watchedCrops:';
 
-function loadWatched(): CropType[] {
-  if (typeof window === 'undefined') return [];
+function storageKey(userId: string) {
+  return `${STORAGE_KEY_PREFIX}${userId}`;
+}
+
+function loadWatched(userId: string | undefined): CropType[] {
+  if (typeof window === 'undefined' || !userId) return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey(userId));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as string[];
     return parsed.filter((c): c is CropType => Object.values(CropType).includes(c as CropType));
@@ -24,9 +29,9 @@ function loadWatched(): CropType[] {
   }
 }
 
-function saveWatched(crops: CropType[]) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(crops));
+function saveWatched(userId: string | undefined, crops: CropType[]) {
+  if (typeof window === 'undefined' || !userId) return;
+  localStorage.setItem(storageKey(userId), JSON.stringify(crops));
 }
 
 type WatchedCropsContextValue = {
@@ -39,28 +44,30 @@ type WatchedCropsContextValue = {
 const WatchedCropsContext = createContext<WatchedCropsContextValue | null>(null);
 
 export function WatchedCropsProvider({ children }: { children: ReactNode }) {
+  const { user } = useUser();
+  const userId = user?.id;
   const [watched, setWatched] = useState<CropType[]>([]);
 
   useEffect(() => {
-    setWatched(loadWatched());
-  }, []);
+    setWatched(loadWatched(userId));
+  }, [userId]);
 
   const add = useCallback((crop: CropType) => {
     setWatched((prev) => {
       if (prev.includes(crop)) return prev;
       const next = [...prev, crop];
-      saveWatched(next);
+      saveWatched(userId, next);
       return next;
     });
-  }, []);
+  }, [userId]);
 
   const remove = useCallback((crop: CropType) => {
     setWatched((prev) => {
       const next = prev.filter((c) => c !== crop);
-      saveWatched(next);
+      saveWatched(userId, next);
       return next;
     });
-  }, []);
+  }, [userId]);
 
   const isWatched = useCallback(
     (crop: CropType) => watched.includes(crop),

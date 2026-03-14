@@ -1,5 +1,8 @@
 import { CropType } from './types';
 
+/** Weekday numbers (0 = Sunday, 1 = Monday, ... 6 = Saturday) that are valid contract delivery days. */
+export const CONTRACT_DELIVERY_DAYS: number[] = [0, 1];
+
 /** Yield kg per acre (from jamaican_crops.json yield_kg_per_hectare / 2.471). */
 export const CROP_YIELD_PER_ACRE: Record<CropType, number> = {
   [CropType.ACKEE]: 3240,

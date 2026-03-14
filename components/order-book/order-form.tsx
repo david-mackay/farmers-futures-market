@@ -11,7 +11,7 @@ import { DeliveryDateModal } from '@/components/delivery-date-modal';
 import { useUser } from '@/hooks/use-user';
 import { useDevMode } from '@/hooks/use-dev-mode';
 import { api } from '@/lib/api-client';
-import { formatPrice, formatDeliveryDate, getNextMondays } from '@/lib/format';
+import { formatPrice, formatDeliveryDate, getNextContractDays } from '@/lib/format';
 
 interface OrderFormProps {
   onSuccess?: () => void;
@@ -31,7 +31,7 @@ export function OrderForm({ onSuccess, defaultCrop, defaultType, defaultQuantity
   const [orderType, setOrderType] = useState<string>(defaultType || OrderType.BID);
   const [pricePerKg, setPricePerKg] = useState(defaultPricePerKg?.toString() || '');
   const [quantityKg, setQuantityKg] = useState(defaultQuantityKg?.toString() || '');
-  const [deliveryDate, setDeliveryDate] = useState(defaultDeliveryDate || getNextMondays(1)[0] || '');
+  const [deliveryDate, setDeliveryDate] = useState(defaultDeliveryDate || getNextContractDays(1)[0] || '');
   const [showDateModal, setShowDateModal] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -139,14 +139,14 @@ export function OrderForm({ onSuccess, defaultCrop, defaultType, defaultQuantity
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Delivery date (Monday)</label>
+        <label className="block text-sm font-medium text-foreground mb-1">Delivery date</label>
         <button
           type="button"
           onClick={() => setShowDateModal(true)}
           className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-left hover:bg-muted-bg transition-colors"
         >
           <Calendar className="w-4 h-4 text-muted" aria-hidden />
-          {deliveryDate ? formatDeliveryDate(deliveryDate) : 'Select Monday'}
+          {deliveryDate ? formatDeliveryDate(deliveryDate) : 'Select date'}
         </button>
       </div>
       <DeliveryDateModal
