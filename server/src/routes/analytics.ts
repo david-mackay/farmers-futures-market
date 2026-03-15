@@ -5,15 +5,17 @@ import * as analyticsService from '../services/analytics-service';
 export function createAnalyticsRouter() {
   const router = Router();
 
-  router.get('/heat-map', (_req, res) => {
-    res.json(analyticsService.getHeatMap());
+  router.get('/heat-map', async (_req, res) => {
+    const data = await analyticsService.getHeatMap();
+    res.json(data);
   });
 
-  router.get('/plant-advisor', (_req, res) => {
-    res.json(analyticsService.getPlantRecommendations());
+  router.get('/plant-advisor', async (_req, res) => {
+    const data = await analyticsService.getPlantRecommendations();
+    res.json(data);
   });
 
-  router.get('/hedge-flow', (req, res) => {
+  router.get('/hedge-flow', async (req, res) => {
     const cropType = req.query.crop_type as CropType;
     const acreage = parseFloat(req.query.acreage as string);
 
@@ -22,7 +24,8 @@ export function createAnalyticsRouter() {
       return;
     }
 
-    res.json(analyticsService.getHedgeFlowCalc(cropType, acreage));
+    const data = await analyticsService.getHedgeFlowCalc(cropType, acreage);
+    res.json(data);
   });
 
   return router;

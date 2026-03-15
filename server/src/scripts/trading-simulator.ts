@@ -4,6 +4,7 @@
  * Run separately: npm run sim (from repo root). Requires the server to be running.
  */
 
+import 'dotenv/config';
 import { CONTRACT_DELIVERY_DAYS } from '../shared/constants';
 import db from "../db/connection";
 import * as userService from "../services/user-service";
@@ -43,19 +44,23 @@ function getNextContractDays(count: number): string[] {
   return out.slice(0, count);
 }
 
-function ensureSimUsers(): void {
-  if (!userService.getUserById(SIM_FARMER_ID)) {
-    db.prepare(
+async function ensureSimUsers(): Promise<void> {
+  const farmer = await userService.getUserById(SIM_FARMER_ID);
+  if (!farmer) {
+    await db.run(
       `INSERT INTO users (id, address, email, display_name, role, is_farmer, is_verified, created_at)
-       VALUES (?, ?, NULL, 'Sim Farmer', 'FARMER', 1, 1, datetime('now'))`,
-    ).run(SIM_FARMER_ID, SIM_FARMER_ADDRESS);
+       VALUES ($1, $2, NULL, 'Sim Farmer', 'FARMER', 1, 1, NOW())`,
+      [SIM_FARMER_ID, SIM_FARMER_ADDRESS]
+    );
     console.log("[sim] Created sim farmer", SIM_FARMER_ID);
   }
-  if (!userService.getUserById(SIM_BUYER_ID)) {
-    db.prepare(
+  const buyer = await userService.getUserById(SIM_BUYER_ID);
+  if (!buyer) {
+    await db.run(
       `INSERT INTO users (id, address, email, display_name, role, is_farmer, is_verified, created_at)
-       VALUES (?, ?, NULL, 'Sim Buyer', 'TRADER', 0, 0, datetime('now'))`,
-    ).run(SIM_BUYER_ID, SIM_BUYER_ADDRESS);
+       VALUES ($1, $2, NULL, 'Sim Buyer', 'TRADER', 0, 0, NOW())`,
+      [SIM_BUYER_ID, SIM_BUYER_ADDRESS]
+    );
     console.log("[sim] Created sim buyer", SIM_BUYER_ID);
   }
 }
@@ -177,8 +182,8 @@ async function tick(deliveryDate: string): Promise<void> {
   await apiFill(order.id, side);
 }
 
-function run(): void {
-  ensureSimUsers();
+async function run(): Promise<void> {
+  await ensureSimUsers();
   const dates = getNextContractDays(1);
   const deliveryDate = dates[0];
   if (!deliveryDate) {
@@ -200,4 +205,7 @@ function run(): void {
   setInterval(() => tick(deliveryDate), INTERVAL_MS);
 }
 
-run();
+run().catch((e) => {
+  console.error("[sim]", e);
+  process.exit(1);
+});

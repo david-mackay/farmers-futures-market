@@ -4,7 +4,11 @@ import { useState, useEffect } from 'react';
 import { Order, OrderType } from '@/shared/types';
 import { CROP_LABELS } from '@/shared/constants';
 import { useUser } from '@/hooks/use-user';
+import { useDevMode } from '@/hooks/use-dev-mode';
+import { useFillWithPayment } from '@/hooks/use-fill-with-payment';
+import { Button } from '@/components/ui/button';
 import { TransactButton } from '@/components/transact-button';
+import { FillConfirmModal } from '@/components/order-book/fill-confirm-modal';
 import { CropNameLink } from '@/components/crop-name-link';
 import { formatPricePerKg, formatDeliveryDate } from '@/lib/format';
 import { api } from '@/lib/api-client';
@@ -24,7 +28,11 @@ interface OrderBookViewProps {
 /** Level II–style order book: best bid/ask at top, then Fill | Size | Bid | Ask | Size | Buy — buttons on ends, prices center */
 export function OrderBookView({ orders, cropType, deliveryDate, onUpdate }: OrderBookViewProps) {
   const { user } = useUser();
+  const devMode = useDevMode();
+  const { executeFill, loading: fillPaymentLoading, error: fillPaymentError, clearError: clearFillError, canFill } = useFillWithPayment();
   const [livePrice, setLivePrice] = useState<LastPriceResult>({ livePrice: null, source: null });
+  const [confirmOrder, setConfirmOrder] = useState<Order | null>(null);
+  const [fillLoading, setFillLoading] = useState(false);
 
   useEffect(() => {
     if (!cropType || !deliveryDate) return;
@@ -49,6 +57,26 @@ export function OrderBookView({ orders, cropType, deliveryDate, onUpdate }: Orde
   const bestAsk = asks[0];
   const bestBidSizeKg = bestBid ? bestBid.quantity : 0;
   const bestAskSizeKg = bestAsk ? bestAsk.quantity : 0;
+
+  const handleFillConfirm = async () => {
+    if (!confirmOrder) return;
+    if (devMode) {
+      setFillLoading(true);
+      try {
+        await api.post(`/api/orders/${confirmOrder.id}/fill`);
+        setConfirmOrder(null);
+        onUpdate?.();
+      } finally {
+        setFillLoading(false);
+      }
+      return;
+    }
+    const ok = await executeFill(confirmOrder.id);
+    if (ok) {
+      setConfirmOrder(null);
+      onUpdate?.();
+    }
+  };
 
   // Build rows by convergence: pair bid rows with ask rows (bid desc, ask asc)
   const maxRows = Math.max(bids.length, asks.length);
@@ -110,14 +138,24 @@ export function OrderBookView({ orders, cropType, deliveryDate, onUpdate }: Orde
               <tr key={i} className="hover:bg-muted-bg/50 transition-colors duration-150">
                 <td className="py-2 pl-2 sm:pl-3 pr-1 align-middle">
                   {row.bid && user && row.bid.creator_id !== user.id ? (
-                    <TransactButton
-                      orderId={row.bid.id}
-                      action="Fill"
-                      endpoint={`/api/orders/${row.bid.id}/fill`}
-                      onSuccess={onUpdate}
-                      variant="outline"
-                      size="sm"
-                    />
+                    devMode ? (
+                      <TransactButton
+                        orderId={row.bid.id}
+                        action="Fill"
+                        endpoint={`/api/orders/${row.bid.id}/fill`}
+                        onSuccess={onUpdate}
+                        variant="outline"
+                        size="sm"
+                      />
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setConfirmOrder(row.bid!)}
+                      >
+                        Fill
+                      </Button>
+                    )
                   ) : (
                     <span className="text-muted">—</span>
                   )}
@@ -136,14 +174,24 @@ export function OrderBookView({ orders, cropType, deliveryDate, onUpdate }: Orde
                 </td>
                 <td className="py-2 pr-2 sm:pr-3 pl-1 align-middle">
                   {row.ask && user && row.ask.creator_id !== user.id ? (
-                    <TransactButton
-                      orderId={row.ask.id}
-                      action="Buy"
-                      endpoint={`/api/orders/${row.ask.id}/fill`}
-                      onSuccess={onUpdate}
-                      variant="primary"
-                      size="sm"
-                    />
+                    devMode ? (
+                      <TransactButton
+                        orderId={row.ask.id}
+                        action="Buy"
+                        endpoint={`/api/orders/${row.ask.id}/fill`}
+                        onSuccess={onUpdate}
+                        variant="primary"
+                        size="sm"
+                      />
+                    ) : (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setConfirmOrder(row.ask!)}
+                      >
+                        Buy
+                      </Button>
+                    )
                   ) : (
                     <span className="text-muted">—</span>
                   )}
@@ -153,6 +201,20 @@ export function OrderBookView({ orders, cropType, deliveryDate, onUpdate }: Orde
           </tbody>
         </table>
       </div>
+
+      {confirmOrder && (
+        <FillConfirmModal
+          open={!!confirmOrder}
+          onClose={() => { clearFillError(); setConfirmOrder(null); }}
+          order={confirmOrder}
+          actionLabel={confirmOrder.type === OrderType.BID ? 'Fill' : 'Buy'}
+          onConfirm={handleFillConfirm}
+          loading={devMode ? fillLoading : fillPaymentLoading}
+          error={fillPaymentError}
+          confirmDisabled={!devMode && !canFill}
+          confirmDisabledReason={!canFill ? 'Connect wallet first' : undefined}
+        />
+      )}
 
       <p className="text-xs text-muted mt-2">
         <CropNameLink

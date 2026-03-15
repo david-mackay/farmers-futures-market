@@ -45,6 +45,11 @@ export function getCropSlug(crop: Pick<CropEncyclopediaEntry, 'common_name'>) {
   return crop.common_name.replace(/_/g, '-');
 }
 
+/** Canonical crop_type for API/DB (UPPER_SNAKE). Matches server seed and sim. */
+export function getCropTypeForApi(commonName: string) {
+  return commonName.toUpperCase().replace(/-/g, '_');
+}
+
 export function getCropHref(crop: Pick<CropEncyclopediaEntry, 'common_name'>) {
   return `/crops/${getCropSlug(crop)}`;
 }

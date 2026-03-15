@@ -19,7 +19,7 @@ export const listVoucherSchema = z.object({
 });
 
 export const createUserSchema = z.object({
-  address: z.string().min(1),
+  address: z.string().min(32).max(64),
   display_name: z.string().min(1).max(100),
   role: z.enum(['FARMER', 'TRADER']),
 });

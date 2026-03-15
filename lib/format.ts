@@ -135,3 +135,16 @@ export function formatRevenue(amount: number): string {
   if (a >= 1000) return `${sym}${(a / 1000).toFixed(1)}K`;
   return `${sym}${a.toFixed(2)}`;
 }
+
+/** Format USDC amount from smallest unit (6 decimals) to display string. */
+export function formatUsdc(amountSmallestUnit: number): string {
+  const usdc = amountSmallestUnit / 1_000_000;
+  if (usdc >= 1000) return `$${(usdc / 1000).toFixed(1)}k`;
+  if (usdc >= 1) return `$${usdc.toFixed(2)}`;
+  return `$${usdc.toFixed(4)}`;
+}
+
+/** Total order value in USD (price is stored in JMD per kg). */
+export function orderTotalUsd(priceJmdPerKg: number, quantityKg: number, jmdPerUsd: number): number {
+  return (priceJmdPerKg / jmdPerUsd) * quantityKg;
+}

@@ -7,7 +7,9 @@ import {
   formatCropLabel,
   getCropHref,
   getCropSlug,
+  getCropTypeForApi,
 } from '@/shared/crop-encyclopedia';
+import { CropPriceChart } from '@/components/crops/crop-price-chart';
 
 interface CropDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -113,6 +115,10 @@ export default async function CropDetailPage({ params }: CropDetailPageProps) {
             </dl>
           </div>
         </div>
+      </section>
+
+      <section>
+        <CropPriceChart cropType={getCropTypeForApi(crop.common_name)} cropName={crop.display_name} className="mb-6" />
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

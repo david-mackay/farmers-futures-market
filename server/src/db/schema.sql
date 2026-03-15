@@ -1,16 +1,19 @@
+-- Postgres schema for Future's Farmer's Market
+-- Source of truth for db:push (npm run db:push)
+
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   address TEXT UNIQUE NOT NULL,
   email TEXT,
   display_name TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('FARMER', 'TRADER')),
-  is_farmer INTEGER NOT NULL DEFAULT 0,
-  is_verified INTEGER NOT NULL DEFAULT 0,
-  verification_submitted_at TEXT,
+  is_farmer SMALLINT NOT NULL DEFAULT 0,
+  is_verified SMALLINT NOT NULL DEFAULT 0,
+  verification_submitted_at TIMESTAMPTZ,
   delivery_address TEXT,
   acreage REAL,
   crops_produced TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS crops (
@@ -36,7 +39,7 @@ CREATE TABLE IF NOT EXISTS crops (
   farmgate_price_jmd_per_kg REAL NOT NULL,
   wholesale_price_jmd_per_kg REAL NOT NULL,
   retail_price_jmd_per_kg REAL NOT NULL,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -49,12 +52,16 @@ CREATE TABLE IF NOT EXISTS orders (
   delivery_date TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'FILLED', 'CANCELLED')),
   filled_by TEXT REFERENCES users(id),
-  filled_at TEXT,
-  escrow_funded_at TEXT,
-  delivered_at TEXT,
-  contested_at TEXT,
-  funds_released_at TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  filled_at TIMESTAMPTZ,
+  escrow_funded_at TIMESTAMPTZ,
+  delivered_at TIMESTAMPTZ,
+  contested_at TIMESTAMPTZ,
+  funds_released_at TIMESTAMPTZ,
+  refunded_at TIMESTAMPTZ,
+  total_amount_usdc BIGINT,
+  pending_fill_by TEXT,
+  pending_fill_expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS vouchers (
@@ -66,8 +73,8 @@ CREATE TABLE IF NOT EXISTS vouchers (
   delivery_date TEXT NOT NULL,
   purchase_price REAL NOT NULL,
   listed_price REAL,
-  is_listed INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  is_listed SMALLINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_orders_crop_type ON orders(crop_type);

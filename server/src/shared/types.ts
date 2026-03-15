@@ -86,6 +86,10 @@ export interface Order {
   contested_at?: string | null;
   /** When funds were released to seller. */
   funds_released_at?: string | null;
+  /** When dispute was resolved with refund to buyer. */
+  refunded_at?: string | null;
+  /** Total order amount in USDC smallest unit (6 decimals). Set when filled. */
+  total_amount_usdc?: number | null;
   created_at: string;
 }
 

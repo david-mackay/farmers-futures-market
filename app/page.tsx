@@ -223,10 +223,13 @@ export default function DashboardPage() {
                     </div>
                     {/* Escrow status and actions */}
                     <div className="mt-2 pt-2 border-t border-border/60 flex flex-wrap items-center gap-2 text-xs">
-                      {order.funds_released_at && (
+                      {order.refunded_at && (
+                        <span className="text-muted">Refunded to buyer</span>
+                      )}
+                      {order.funds_released_at && !order.refunded_at && (
                         <span className="text-muted">Funds released</span>
                       )}
-                      {order.contested_at && !order.funds_released_at && (
+                      {order.contested_at && !order.funds_released_at && !order.refunded_at && (
                         <>
                           <span className="text-accent-red">Contested – under review</span>
                           <Button size="sm" variant="outline" disabled={loadingThis} onClick={() => runEscrow('resolve', 'release')}>
@@ -255,7 +258,7 @@ export default function DashboardPage() {
                               <Button size="sm" variant="outline" disabled={loadingThis} onClick={() => runEscrow('contest')}>
                                 Contest
                               </Button>
-                              <span className="text-muted">Auto-releases in 2 days if no action</span>
+                              <span className="text-muted">Auto-releases in 1 day if no action</span>
                             </>
                           )}
                         </>
@@ -271,7 +274,7 @@ export default function DashboardPage() {
                             </Button>
                           )}
                           {order.delivered_at && (
-                            <span className="text-muted">Delivery attested · waiting for buyer or 2-day auto-release</span>
+                            <span className="text-muted">Delivery attested · waiting for buyer or 1-day auto-release</span>
                           )}
                         </>
                       )}

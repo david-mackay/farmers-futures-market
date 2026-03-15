@@ -1,20 +1,13 @@
 import db from '../db/connection';
 
 export interface LastPriceResult {
-  /** Price of the most recent filled order; null if none. */
   lastFilledPrice: number | null;
-  /** Mid between best bid and best ask (open orders); null if either side missing. */
   midPrice: number | null;
-  /** Live price to display: lastFilledPrice if set, else midPrice, else null. */
   livePrice: number | null;
   source: 'last_trade' | 'mid' | null;
 }
 
-/**
- * Get live price for a crop (and optional delivery date).
- * Uses last filled order price if any; otherwise mid of best bid and best ask.
- */
-export function getLastPrice(cropType: string, deliveryDate?: string | null): LastPriceResult {
+export async function getLastPrice(cropType: string, deliveryDate?: string | null): Promise<LastPriceResult> {
   const result: LastPriceResult = {
     lastFilledPrice: null,
     midPrice: null,
@@ -23,12 +16,11 @@ export function getLastPrice(cropType: string, deliveryDate?: string | null): La
   };
 
   if (deliveryDate) {
-    const row = db
-      .prepare(
-        `SELECT price FROM orders WHERE crop_type = ? AND delivery_date = ? AND status = 'FILLED' AND filled_at IS NOT NULL
-         ORDER BY filled_at DESC LIMIT 1`
-      )
-      .get(cropType, deliveryDate) as { price: number } | undefined;
+    const row = (await db.get(
+      `SELECT price FROM orders WHERE crop_type = $1 AND delivery_date = $2 AND status = 'FILLED' AND filled_at IS NOT NULL
+       ORDER BY filled_at DESC LIMIT 1`,
+      [cropType, deliveryDate]
+    )) as { price: number } | undefined;
     if (row) {
       result.lastFilledPrice = row.price;
       result.livePrice = row.price;
@@ -36,12 +28,11 @@ export function getLastPrice(cropType: string, deliveryDate?: string | null): La
       return result;
     }
   } else {
-    const row = db
-      .prepare(
-        `SELECT price FROM orders WHERE crop_type = ? AND status = 'FILLED' AND filled_at IS NOT NULL
-         ORDER BY filled_at DESC LIMIT 1`
-      )
-      .get(cropType) as { price: number } | undefined;
+    const row = (await db.get(
+      `SELECT price FROM orders WHERE crop_type = $1 AND status = 'FILLED' AND filled_at IS NOT NULL
+       ORDER BY filled_at DESC LIMIT 1`,
+      [cropType]
+    )) as { price: number } | undefined;
     if (row) {
       result.lastFilledPrice = row.price;
       result.livePrice = row.price;
@@ -50,18 +41,14 @@ export function getLastPrice(cropType: string, deliveryDate?: string | null): La
     }
   }
 
-  const baseSql = `SELECT type, price FROM orders WHERE crop_type = ? AND status = 'OPEN'`;
+  const baseSql = `SELECT type, price FROM orders WHERE crop_type = $1 AND status = 'OPEN'`;
   const params: (string | undefined)[] = [cropType];
   if (deliveryDate) {
     params.push(deliveryDate);
   }
-  const orders = db
-    .prepare(
-      deliveryDate
-        ? `${baseSql} AND delivery_date = ?`
-        : baseSql
-    )
-    .all(...params) as { type: string; price: number }[];
+  const orders = (await (deliveryDate
+    ? db.all(`${baseSql} AND delivery_date = $2`, params)
+    : db.all(baseSql, params))) as { type: string; price: number }[];
 
   const bids = orders.filter((o) => o.type === 'BID').map((o) => o.price);
   const asks = orders.filter((o) => o.type === 'ASK').map((o) => o.price);
@@ -77,4 +64,19 @@ export function getLastPrice(cropType: string, deliveryDate?: string | null): La
   }
 
   return result;
+}
+
+export interface PriceHistoryPoint {
+  filled_at: string;
+  price: number;
+}
+
+export async function getPriceHistory(cropType: string): Promise<PriceHistoryPoint[]> {
+  const rows = (await db.all(
+    `SELECT filled_at::text, price FROM orders
+     WHERE crop_type = $1 AND status = 'FILLED' AND filled_at IS NOT NULL
+     ORDER BY filled_at ASC`,
+    [cropType]
+  )) as { filled_at: string; price: number }[];
+  return rows;
 }

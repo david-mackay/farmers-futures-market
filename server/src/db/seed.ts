@@ -17,7 +17,6 @@ interface JamaicanCrop {
   yield_kg_per_hectare: number;
 }
 
-/** Next N contract delivery days (CONTRACT_DELIVERY_DAYS) as YYYY-MM-DD, from today onward. */
 function getNextContractDays(count: number): string[] {
   const out: string[] = [];
   const today = new Date();
@@ -37,12 +36,11 @@ function getNextContractDays(count: number): string[] {
   return out.slice(0, count);
 }
 
-/** common_name to crop_type (UPPER_SNAKE) for orders table. */
 function toCropType(commonName: string): string {
   return commonName.toUpperCase().replace(/-/g, '_');
 }
 
-function seed() {
+async function seed() {
   const jsonPath = path.join(__dirname, '../../jamaican_crops.json');
   if (!fs.existsSync(jsonPath)) {
     console.error('jamaican_crops.json not found at', jsonPath);
@@ -51,79 +49,58 @@ function seed() {
   const crops: JamaicanCrop[] = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
   const deliveryDates = getNextContractDays(4);
 
-  const run = db.transaction(() => {
-    db.exec('DELETE FROM vouchers');
-    db.exec('DELETE FROM orders');
-    db.exec('DELETE FROM users');
-    db.exec('DELETE FROM crops');
+  await db.runInTransaction(async (tx) => {
+    await tx.run('DELETE FROM vouchers');
+    await tx.run('DELETE FROM orders');
+    await tx.run('DELETE FROM users');
+    await tx.run('DELETE FROM crops');
 
-    const insertCrop = db.prepare(`
-      INSERT INTO crops (
-        id,
-        common_name,
-        display_name,
-        scientific_name,
-        category,
-        planting_season,
-        harvest_start_days,
-        harvest_end_days,
-        temperature_min_c,
-        temperature_max_c,
-        optimal_temperature_c,
-        altitude_min_m,
-        altitude_max_m,
-        soil_ph_min,
-        soil_ph_max,
-        water_mm_per_week,
-        sunlight,
-        lifecycle,
-        yield_kg_per_hectare,
-        farmgate_price_jmd_per_kg,
-        wholesale_price_jmd_per_kg,
-        retail_price_jmd_per_kg
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
     for (const crop of CROPS) {
-      insertCrop.run(
-        crop.id,
-        crop.common_name,
-        crop.display_name,
-        crop.scientific_name,
-        crop.category,
-        crop.planting_season,
-        crop.harvest_start_days,
-        crop.harvest_end_days,
-        crop.temperature_min_c,
-        crop.temperature_max_c,
-        crop.optimal_temperature_c,
-        crop.altitude_min_m,
-        crop.altitude_max_m,
-        crop.soil_ph_min,
-        crop.soil_ph_max,
-        crop.water_mm_per_week,
-        crop.sunlight,
-        crop.lifecycle,
-        crop.yield_kg_per_hectare,
-        crop.farmgate_price_jmd_per_kg,
-        crop.wholesale_price_jmd_per_kg,
-        crop.retail_price_jmd_per_kg
+      await tx.run(
+        `INSERT INTO crops (
+          id, common_name, display_name, scientific_name, category, planting_season,
+          harvest_start_days, harvest_end_days, temperature_min_c, temperature_max_c,
+          optimal_temperature_c, altitude_min_m, altitude_max_m, soil_ph_min, soil_ph_max,
+          water_mm_per_week, sunlight, lifecycle, yield_kg_per_hectare,
+          farmgate_price_jmd_per_kg, wholesale_price_jmd_per_kg, retail_price_jmd_per_kg
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
+        [
+          crop.id,
+          crop.common_name,
+          crop.display_name,
+          crop.scientific_name,
+          crop.category,
+          crop.planting_season,
+          crop.harvest_start_days,
+          crop.harvest_end_days,
+          crop.temperature_min_c,
+          crop.temperature_max_c,
+          crop.optimal_temperature_c,
+          crop.altitude_min_m,
+          crop.altitude_max_m,
+          crop.soil_ph_min,
+          crop.soil_ph_max,
+          crop.water_mm_per_week,
+          crop.sunlight,
+          crop.lifecycle,
+          crop.yield_kg_per_hectare,
+          crop.farmgate_price_jmd_per_kg,
+          crop.wholesale_price_jmd_per_kg,
+          crop.retail_price_jmd_per_kg,
+        ]
       );
     }
 
     const now = new Date().toISOString();
-    db.prepare(
+    await tx.run(
       `INSERT INTO users (id, address, email, display_name, role, is_farmer, is_verified, created_at)
-       VALUES (?, ?, NULL, ?, 'FARMER', 1, 1, ?)`
-    ).run(SEED_FARMER_ID, SEED_FARMER_ADDRESS, 'Seed Farmer', now);
-
-    db.prepare(
+       VALUES ($1, $2, NULL, $3, 'FARMER', 1, 1, $4)`,
+      [SEED_FARMER_ID, SEED_FARMER_ADDRESS, 'Seed Farmer', now]
+    );
+    await tx.run(
       `INSERT INTO users (id, address, email, display_name, role, is_farmer, is_verified, created_at)
-       VALUES (?, ?, NULL, ?, 'TRADER', 0, 0, ?)`
-    ).run(SEED_BUYER_ID, SEED_BUYER_ADDRESS, 'Seed Buyer', now);
-
-    const insertOrder = db.prepare(
-      `INSERT INTO orders (id, creator_id, crop_type, type, price, quantity, delivery_date, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'OPEN', ?)`
+       VALUES ($1, $2, NULL, $3, 'TRADER', 0, 0, $4)`,
+      [SEED_BUYER_ID, SEED_BUYER_ADDRESS, 'Seed Buyer', now]
     );
 
     const quantities = [100, 250, 500, 1000];
@@ -133,15 +110,10 @@ function seed() {
       const askPrice = crop.wholesale_price_jmd_per_kg;
       for (let m = 0; m < deliveryDates.length; m++) {
         const qty = quantities[orderIndex % quantities.length];
-        insertOrder.run(
-          uuid(),
-          SEED_FARMER_ID,
-          cropType,
-          'ASK',
-          askPrice,
-          qty,
-          deliveryDates[m],
-          now
+        await tx.run(
+          `INSERT INTO orders (id, creator_id, crop_type, type, price, quantity, delivery_date, status, created_at)
+           VALUES ($1, $2, $3, 'ASK', $4, $5, $6, 'OPEN', $7)`,
+          [uuid(), SEED_FARMER_ID, cropType, askPrice, qty, deliveryDates[m], now]
         );
         orderIndex++;
       }
@@ -152,22 +124,16 @@ function seed() {
       const bidPrice = Math.round(crop.wholesale_price_jmd_per_kg * 0.9);
       if (bidPrice <= 0) continue;
       for (let m = 0; m < deliveryDates.length; m++) {
-        insertOrder.run(
-          uuid(),
-          SEED_BUYER_ID,
-          cropType,
-          'BID',
-          bidPrice,
-          quantities[orderIndex % quantities.length],
-          deliveryDates[m],
-          now
+        await tx.run(
+          `INSERT INTO orders (id, creator_id, crop_type, type, price, quantity, delivery_date, status, created_at)
+           VALUES ($1, $2, $3, 'BID', $4, $5, $6, 'OPEN', $7)`,
+          [uuid(), SEED_BUYER_ID, cropType, bidPrice, quantities[orderIndex % quantities.length], deliveryDates[m], now]
         );
         orderIndex++;
       }
     }
 
-    // One crop + one day with a lot of orders for a dense order book example
-    const hotCrop = crops[1]; // e.g. banana
+    const hotCrop = crops[1];
     const hotCropType = toCropType(hotCrop.common_name);
     const hotDate = deliveryDates[0];
     const baseBid = Math.round(hotCrop.wholesale_price_jmd_per_kg * 0.85);
@@ -175,37 +141,29 @@ function seed() {
     const NUM_EXTRA_BIDS = 12;
     const NUM_EXTRA_ASKS = 10;
     for (let i = 0; i < NUM_EXTRA_BIDS; i++) {
-      insertOrder.run(
-        uuid(),
-        SEED_BUYER_ID,
-        hotCropType,
-        'BID',
-        baseBid + i * 5,
-        200 + (i % 5) * 150,
-        hotDate,
-        now
+      await tx.run(
+        `INSERT INTO orders (id, creator_id, crop_type, type, price, quantity, delivery_date, status, created_at)
+         VALUES ($1, $2, $3, 'BID', $4, $5, $6, 'OPEN', $7)`,
+        [uuid(), SEED_BUYER_ID, hotCropType, baseBid + i * 5, 200 + (i % 5) * 150, hotDate, now]
       );
     }
     for (let i = 0; i < NUM_EXTRA_ASKS; i++) {
-      insertOrder.run(
-        uuid(),
-        SEED_FARMER_ID,
-        hotCropType,
-        'ASK',
-        baseAsk + i * 8,
-        180 + (i % 4) * 120,
-        hotDate,
-        now
+      await tx.run(
+        `INSERT INTO orders (id, creator_id, crop_type, type, price, quantity, delivery_date, status, created_at)
+         VALUES ($1, $2, $3, 'ASK', $4, $5, $6, 'OPEN', $7)`,
+        [uuid(), SEED_FARMER_ID, hotCropType, baseAsk + i * 8, 180 + (i % 4) * 120, hotDate, now]
       );
     }
   });
 
   const extraOrders = 12 + 10;
-  run();
   console.log(
     `Seeded: ${CROPS.length} crops, 2 users, ${crops.length * deliveryDates.length * 2 + extraOrders} OPEN orders (ASK + BID) with JMD/kg from jamaican_crops.json. ` +
       `Banana (or crop #2) has many orders on ${deliveryDates[0]} for order book demo.`
   );
 }
 
-seed();
+seed().catch((e) => {
+  console.error('Seed failed:', e);
+  process.exit(1);
+});

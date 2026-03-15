@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start",
     "seed": "cd server && npm run seed",
+    "db:push": "cd server && npm run db:push",
     "sim": "cd server && npx tsx src/scripts/trading-simulator.ts",
     "lint": "eslint"
   },
@@ -34,6 +35,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "5.9.3"
   }
 }
