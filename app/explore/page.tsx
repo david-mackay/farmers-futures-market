@@ -29,9 +29,11 @@ export default function ExplorePage() {
   const dateStripRef = useRef<HTMLDivElement>(null);
   const selectedDateRef = useRef<HTMLButtonElement>(null);
   const [query, setQuery] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
   const [deliveryDate, setDeliveryDate] = useState('');
   const [selectedCrop, setSelectedCrop] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const crop = searchParams.get('crop') || '';
@@ -89,22 +91,78 @@ export default function ExplorePage() {
   const { isWatched } = useWatchedCrops();
 
   const showOrderBook = Boolean(selectedCrop && deliveryDate);
+  const showSearchDropdown = searchFocused || query.length > 0;
+
+  const handleSelectCrop = (crop: CropType) => {
+    setQuery('');
+    setSearchFocused(false);
+    router.replace(`/explore?crop=${crop}`);
+  };
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setSearchFocused(false);
+      }
+    }
+    if (showSearchDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showSearchDropdown]);
 
   return (
     <div className="flex flex-col min-h-0">
       <div className="border-b border-border bg-background">
         <div className="px-4 sm:px-6 py-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted pointer-events-none" aria-hidden />
+          <div className="relative" ref={searchContainerRef}>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted pointer-events-none z-10" aria-hidden />
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setSearchFocused(false);
+              }}
               placeholder="Search crops… e.g. potato, wheat"
               className="w-full pl-10 pr-4 py-3 bg-muted-bg border-0 rounded-lg text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
               aria-label="Search crops"
+              aria-expanded={showSearchDropdown}
+              aria-haspopup="listbox"
+              aria-controls="crop-search-listbox"
+              id="crop-search-input"
               autoFocus
             />
+            {showSearchDropdown && (
+              <ul
+                id="crop-search-listbox"
+                role="listbox"
+                aria-labelledby="crop-search-input"
+                className="absolute left-0 right-0 top-full mt-1 max-h-[min(60vh,20rem)] overflow-y-auto rounded-lg border border-border bg-card shadow-lg z-50 divide-y divide-border"
+              >
+                {filteredCrops.length === 0 ? (
+                  <li className="px-4 py-3 text-muted text-sm" role="option">
+                    No crops match.
+                  </li>
+                ) : (
+                  filteredCrops.map((crop) => (
+                    <li key={crop} role="option" aria-selected={selectedCrop === crop}>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectCrop(crop)}
+                        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium text-foreground hover:bg-muted-bg focus:bg-muted-bg focus:outline-none cursor-pointer touch-manipulation"
+                      >
+                        <span>{CROP_LABELS[crop]}</span>
+                        {selectedCrop === crop && (
+                          <span className="text-primary text-xs">Current</span>
+                        )}
+                      </button>
+                    </li>
+                  ))
+                )}
+              </ul>
+            )}
           </div>
         </div>
       </div>

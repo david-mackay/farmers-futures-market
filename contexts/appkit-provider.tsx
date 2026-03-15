@@ -2,11 +2,9 @@
 
 import { type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cookieToInitialState, WagmiProvider } from 'wagmi';
 import { createAppKit } from '@reown/appkit/react';
-import { mainnet } from '@reown/appkit/networks';
-import { wagmiAdapter, appkitProjectId, wagmiConfig } from '@/config/appkit-config';
-import type { Config } from 'wagmi';
+import { solana, solanaTestnet, solanaDevnet } from '@reown/appkit/networks';
+import { solanaAdapter, appkitProjectId } from '@/config/appkit-config';
 
 const queryClient = new QueryClient();
 
@@ -19,10 +17,10 @@ const metadata = {
 
 if (appkitProjectId) {
   createAppKit({
-    adapters: [wagmiAdapter],
+    adapters: [solanaAdapter],
     projectId: appkitProjectId,
-    networks: [mainnet],
-    defaultNetwork: mainnet,
+    networks: [solana, solanaTestnet, solanaDevnet],
+    defaultNetwork: solana,
     metadata,
     features: {
       email: true,
@@ -35,16 +33,13 @@ if (appkitProjectId) {
 
 export function AppKitProvider({
   children,
-  cookies,
 }: {
   children: ReactNode;
-  cookies: string | null;
+  cookies?: string | null;
 }) {
-  const initialState = cookieToInitialState(wagmiConfig as Config, cookies);
-
   return (
-    <WagmiProvider config={wagmiConfig as Config} initialState={initialState}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </WagmiProvider>
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
   );
 }

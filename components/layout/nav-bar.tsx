@@ -1,10 +1,10 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Sun, Moon, LogOut } from 'lucide-react';
-import { useDisconnect } from 'wagmi';
-import { AppKitButton } from '@reown/appkit/react';
+import { AppKitButton, useAppKitAccount, useDisconnect, useAppKitBalance } from '@reown/appkit/react';
 import { useUser } from '@/hooks/use-user';
 import { useDevMode } from '@/hooks/use-dev-mode';
 import { useTheme } from '@/contexts/theme-context';
@@ -22,8 +22,28 @@ const NAV_LINKS = [
 export function NavBar() {
   const pathname = usePathname();
   const { user } = useUser();
+  const { isConnected } = useAppKitAccount();
   const { disconnect } = useDisconnect();
+  const { fetchBalance } = useAppKitBalance();
+  const [balance, setBalance] = useState<{ formatted: string; symbol: string } | null>(null);
   const devMode = useDevMode();
+
+  useEffect(() => {
+    if (!isConnected) {
+      setBalance(null);
+      return;
+    }
+    fetchBalance()
+      .then((res) => {
+        const data = res && typeof res === 'object' && 'data' in res ? (res as { data?: { formatted?: string; symbol?: string } }).data : undefined;
+        if (data?.formatted != null && data?.symbol != null) {
+          setBalance({ formatted: data.formatted, symbol: data.symbol });
+        } else {
+          setBalance(null);
+        }
+      })
+      .catch(() => setBalance(null));
+  }, [isConnected, fetchBalance]);
   const { theme, toggleTheme } = useTheme();
   const { currency, toggleCurrency } = useCurrency();
 
@@ -95,6 +115,16 @@ export function NavBar() {
             )}
             {user && (
               <>
+                {isConnected && (
+                  <div className="flex items-center gap-2">
+                    <AppKitButton />
+                    {balance && (
+                      <span className="text-sm text-muted whitespace-nowrap" title="Wallet balance">
+                        {balance.formatted} {balance.symbol}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <Badge variant={user.is_farmer ? 'farmer' : 'trader'}>
                   {user.is_farmer ? 'Farmer' : 'Buyer'}
                 </Badge>
@@ -106,7 +136,7 @@ export function NavBar() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => disconnect()}
+                  onClick={() => void disconnect()}
                   className="p-2 rounded-lg text-muted hover:text-foreground hover:bg-muted-bg transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 touch-manipulation"
                   aria-label="Sign out"
                 >

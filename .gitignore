@@ -43,6 +43,7 @@ next-env.d.ts
 
 # sqlite
 server/data/*.db*
+server/data/market.db-shm
 
 # shared/ build output (source is .ts; .js/.d.ts/.map are emitted by build)
 shared/*.js
