@@ -166,3 +166,18 @@ export interface OptimizedPlan {
   total_estimated_revenue: number;
   rows: OptimizedPlanRow[];
 }
+
+/** Socket.io: events the server emits to the client. */
+export interface ServerToClientEvents {
+  'order:created': (order: Order) => void;
+  'order:filled': (order: Order) => void;
+  'order:cancelled': (order: Order) => void;
+  'voucher:listed': (voucher: FutureVoucher) => void;
+  'voucher:sold': (voucher: FutureVoucher) => void;
+}
+
+/** Socket.io: events the client sends to the server. */
+export interface ClientToServerEvents {
+  'subscribe:orderbook': (filters?: { crop_type?: string; delivery_date?: string }) => void;
+  'unsubscribe:orderbook': () => void;
+}
