@@ -544,6 +544,33 @@ export async function cancelOrder(
   if (order.status !== OrderStatus.OPEN) return { error: "Order is not open" };
   if (order.creator_id !== userId)
     return { error: "Only the creator can cancel this order" };
+
+  // BID orders have USDC in escrow; refund to creator before cancelling
+  if (order.type === OrderType.BID) {
+    const creator = await getUserById(order.creator_id);
+    if (!creator?.address) {
+      return { error: "Creator wallet address not found; cannot refund deposit" };
+    }
+    const amount =
+      order.total_amount_usdc ??
+      Math.round((order.price / JMD_PER_USD) * order.quantity * 1e6);
+    if (amount <= 0) {
+      return { error: "Invalid order amount" };
+    }
+    try {
+      await sendUsdcFromEscrow({
+        recipientWallet: creator.address,
+        amountSmallestUnit: amount,
+      });
+    } catch (e) {
+      console.error("cancelOrder: refund failed", e);
+      return {
+        error:
+          "Failed to refund deposit. Your order was not cancelled. Please try again or contact support.",
+      };
+    }
+  }
+
   await db.run("UPDATE orders SET status = $1 WHERE id = $2", [
     OrderStatus.CANCELLED,
     orderId,
