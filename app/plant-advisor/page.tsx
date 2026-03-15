@@ -6,6 +6,7 @@ import { CROP_LABELS, CROP_UNIT } from '@/shared/constants';
 import { api } from '@/lib/api-client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CropNameLink } from '@/components/crop-name-link';
 import { formatPrice, formatRevenue } from '@/lib/format';
 import Link from 'next/link';
 
@@ -43,9 +44,12 @@ export default function PlantAdvisorPage() {
                   <div className="text-xs font-bold uppercase tracking-wider text-muted">
                     #{i + 1} Recommended
                   </div>
-                  <h3 className="text-lg font-bold text-foreground">
+                  <CropNameLink
+                    cropName={CROP_LABELS[rec.crop_type]}
+                    className="text-lg font-bold text-foreground hover:text-primary hover:underline"
+                  >
                     {CROP_LABELS[rec.crop_type]}
-                  </h3>
+                  </CropNameLink>
                 </div>
                 {rec.demand_supply_ratio === Infinity && (
                   <Badge variant="ask">No Supply!</Badge>
@@ -100,7 +104,14 @@ export default function PlantAdvisorPage() {
                   {rest.map((rec, i) => (
                     <tr key={rec.crop_type} className="hover:bg-muted-bg/50 transition-colors duration-150">
                       <td className="py-3 px-2 sm:px-4 font-data text-muted">#{i + 4}</td>
-                      <td className="py-3 font-medium">{CROP_LABELS[rec.crop_type]}</td>
+                      <td className="py-3 font-medium">
+                        <CropNameLink
+                          cropName={CROP_LABELS[rec.crop_type]}
+                          className="hover:text-primary hover:underline"
+                        >
+                          {CROP_LABELS[rec.crop_type]}
+                        </CropNameLink>
+                      </td>
                       <td className="py-3 font-data font-semibold text-primary">{formatRevenue(rec.projected_revenue_per_acre)}</td>
                       <td className="py-3 font-data">{formatPrice(rec.avg_bid_price)}/kg</td>
                       <td className="py-3 font-data">{rec.total_demand.toLocaleString()}</td>

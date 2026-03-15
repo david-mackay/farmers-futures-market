@@ -9,6 +9,7 @@ import { useUser } from '@/hooks/use-user';
 import { useWatchedCrops } from '@/hooks/use-watched-crops';
 import { useOrders } from '@/hooks/use-orders';
 import { CropSearchModal } from '@/components/crop-search-modal';
+import { CropNameLink } from '@/components/crop-name-link';
 import { formatPrice, formatDeliveryDate, formatKg } from '@/lib/format';
 import { computeCropPreviews } from '@/lib/crop-previews';
 import { isSeller, isBuyer } from '@/lib/order-role';
@@ -131,9 +132,12 @@ export default function DashboardPage() {
                   <div className="px-4 sm:px-6 py-3.5">
                     <div className="flex items-center justify-between gap-3 min-h-[3.25rem]">
                       <div className="min-w-0">
-                        <div className="font-medium text-foreground">
+                        <CropNameLink
+                          cropName={CROP_LABELS[order.crop_type as CropType]}
+                          className="font-medium text-foreground hover:text-primary hover:underline"
+                        >
                           {CROP_LABELS[order.crop_type as CropType]}
-                        </div>
+                        </CropNameLink>
                         <div className="text-xs text-muted mt-0.5">
                           {formatDeliveryDate(order.delivery_date)}
                           {delivering

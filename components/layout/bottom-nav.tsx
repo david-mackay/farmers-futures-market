@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Store, User } from 'lucide-react';
+import { BookOpen, LayoutDashboard, Store, User } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/explore', label: 'Explore', icon: Store },
+  { href: '/crops', label: 'Crops', icon: BookOpen },
   { href: '/profile', label: 'Profile', icon: User },
 ] as const;
 
@@ -18,7 +19,7 @@ export function BottomNav() {
       className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-area-pb"
       aria-label="Bottom navigation"
     >
-      <div className="grid grid-cols-3 h-14 min-h-[3.5rem]">
+      <div className="grid grid-cols-4 h-14 min-h-[3.5rem]">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || (href !== '/' && pathname.startsWith(href));
           return (

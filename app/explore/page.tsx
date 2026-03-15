@@ -11,6 +11,7 @@ import { OrderBookView } from '@/components/order-book/order-book-view';
 import { OrderForm } from '@/components/order-book/order-form';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
+import { CropNameLink } from '@/components/crop-name-link';
 import { formatDeliveryDate, getDefaultDeliveryDate, isContractDay } from '@/lib/format';
 import Link from 'next/link';
 
@@ -47,10 +48,7 @@ export default function ExplorePage() {
   );
   const { orders: ordersForDefault } = useOrders(filtersForDefault);
 
-  const defaultDeliveryDateVal = useMemo(
-    () => getDefaultDeliveryDate(ordersForDefault),
-    [ordersForDefault]
-  );
+  const defaultDeliveryDateVal = useMemo(() => getDefaultDeliveryDate(ordersForDefault), [ordersForDefault]);
 
   const ordersMatchCrop = useMemo(
     () => ordersForDefault.length > 0 && ordersForDefault[0].crop_type === selectedCrop,
@@ -59,9 +57,9 @@ export default function ExplorePage() {
 
   const datesWithOrders = useMemo(() => {
     if (!ordersMatchCrop) return [];
-    const dates = [...new Set(ordersForDefault.map((o) => o.delivery_date).filter(isContractDay))].filter(
-      (d) => d >= new Date().toISOString().slice(0, 10)
-    ).sort();
+    const dates = [...new Set(ordersForDefault.map((o) => o.delivery_date).filter(isContractDay))]
+      .filter((d) => d >= new Date().toISOString().slice(0, 10))
+      .sort();
     return dates;
   }, [ordersForDefault, ordersMatchCrop]);
 
@@ -122,15 +120,20 @@ export default function ExplorePage() {
               ) : (
                 filteredCrops.map((crop) => (
                   <li key={crop}>
-                    <Link
-                      href={`/explore?crop=${crop}`}
-                      className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 active:bg-muted-bg/50 transition-colors min-h-[3.25rem] touch-manipulation"
-                    >
-                      <span className="font-medium text-foreground">{CROP_LABELS[crop]}</span>
-                      <span className="text-muted text-sm">
+                    <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 min-h-[3.25rem]">
+                      <CropNameLink
+                        cropName={CROP_LABELS[crop]}
+                        className="font-medium text-foreground hover:text-primary hover:underline"
+                      >
+                        {CROP_LABELS[crop]}
+                      </CropNameLink>
+                      <Link
+                        href={`/explore?crop=${crop}`}
+                        className="text-muted text-sm hover:text-foreground"
+                      >
                         {isWatched(crop) ? 'On watchlist' : 'View orders'}
-                      </span>
-                    </Link>
+                      </Link>
+                    </div>
                   </li>
                 ))
               )}
@@ -141,12 +144,25 @@ export default function ExplorePage() {
         <div className="flex-1 flex flex-col min-h-0">
           <div className="border-b border-border bg-background">
             <div className="flex items-center gap-2 px-4 sm:px-6 py-2">
-              <Link
-                href="/explore"
-                className="text-sm font-medium text-foreground truncate hover:text-primary hover:underline touch-manipulation"
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCrop('');
+                  setDeliveryDate('');
+                  setQuery('');
+                  router.replace('/explore');
+                }}
+                className="text-sm text-primary hover:underline cursor-pointer touch-manipulation font-medium"
+              >
+                ← All crops
+              </button>
+              <span className="text-muted">·</span>
+              <CropNameLink
+                cropName={CROP_LABELS[selectedCrop as CropType]}
+                className="text-sm font-medium text-foreground truncate hover:text-primary hover:underline"
               >
                 {CROP_LABELS[selectedCrop as CropType]}
-              </Link>
+              </CropNameLink>
               <Button
                 onClick={() => setShowForm(true)}
                 size="sm"
@@ -203,7 +219,14 @@ export default function ExplorePage() {
           ) : (
             <div className="flex-1 overflow-auto px-4 sm:px-6 py-4">
               <p className="text-muted text-sm">
-                Select a delivery date to see the order book for {CROP_LABELS[selectedCrop as CropType]}.
+                Select a delivery date to see the order book for{' '}
+                <CropNameLink
+                  cropName={CROP_LABELS[selectedCrop as CropType]}
+                  className="font-medium text-foreground hover:text-primary hover:underline"
+                >
+                  {CROP_LABELS[selectedCrop as CropType]}
+                </CropNameLink>
+                .
               </p>
             </div>
           )}

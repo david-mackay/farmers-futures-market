@@ -14,6 +14,7 @@ import { appkitProjectId } from '@/config/appkit-config';
 const NAV_LINKS = [
   { href: '/', label: 'Dashboard' },
   { href: '/explore', label: 'Explore' },
+  { href: '/crops', label: 'Crops' },
   { href: '/profile', label: 'Profile' },
 ];
 

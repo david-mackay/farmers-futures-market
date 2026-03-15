@@ -3,6 +3,7 @@ import * as path from 'path';
 import { v4 as uuid } from 'uuid';
 import { CONTRACT_DELIVERY_DAYS } from '../../../shared/constants';
 import db from './connection';
+import { CROPS } from './crops';
 
 const SEED_FARMER_ID = 'seed-farmer-001';
 const SEED_FARMER_ADDRESS = '0xseed00000000000000000000000000000000000001';
@@ -54,6 +55,60 @@ function seed() {
     db.exec('DELETE FROM vouchers');
     db.exec('DELETE FROM orders');
     db.exec('DELETE FROM users');
+    db.exec('DELETE FROM crops');
+
+    const insertCrop = db.prepare(`
+      INSERT INTO crops (
+        id,
+        common_name,
+        display_name,
+        scientific_name,
+        category,
+        planting_season,
+        harvest_start_days,
+        harvest_end_days,
+        temperature_min_c,
+        temperature_max_c,
+        optimal_temperature_c,
+        altitude_min_m,
+        altitude_max_m,
+        soil_ph_min,
+        soil_ph_max,
+        water_mm_per_week,
+        sunlight,
+        lifecycle,
+        yield_kg_per_hectare,
+        farmgate_price_jmd_per_kg,
+        wholesale_price_jmd_per_kg,
+        retail_price_jmd_per_kg
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    for (const crop of CROPS) {
+      insertCrop.run(
+        crop.id,
+        crop.common_name,
+        crop.display_name,
+        crop.scientific_name,
+        crop.category,
+        crop.planting_season,
+        crop.harvest_start_days,
+        crop.harvest_end_days,
+        crop.temperature_min_c,
+        crop.temperature_max_c,
+        crop.optimal_temperature_c,
+        crop.altitude_min_m,
+        crop.altitude_max_m,
+        crop.soil_ph_min,
+        crop.soil_ph_max,
+        crop.water_mm_per_week,
+        crop.sunlight,
+        crop.lifecycle,
+        crop.yield_kg_per_hectare,
+        crop.farmgate_price_jmd_per_kg,
+        crop.wholesale_price_jmd_per_kg,
+        crop.retail_price_jmd_per_kg
+      );
+    }
 
     const now = new Date().toISOString();
     db.prepare(
@@ -113,7 +168,9 @@ function seed() {
   });
 
   run();
-  console.log('Seeded: 2 users (Seed Farmer, Seed Buyer),', crops.length * deliveryDates.length * 2, 'OPEN orders (ASK + BID) with JMD/kg from jamaican_crops.json.');
+  console.log(
+    `Seeded: ${CROPS.length} crops, 2 users, ${crops.length * deliveryDates.length * 2} OPEN orders (ASK + BID) with JMD/kg from jamaican_crops.json.`
+  );
 }
 
 seed();
