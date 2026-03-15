@@ -14,23 +14,50 @@ export enum UserRole {
   TRADER = 'TRADER',
 }
 
+/** Jamaican crops from jamaican_crops.json (common_name in UPPER_SNAKE). */
 export enum CropType {
-  WHEAT = 'WHEAT',
-  CORN = 'CORN',
-  SOYBEANS = 'SOYBEANS',
-  RICE = 'RICE',
-  TOMATOES = 'TOMATOES',
-  POTATOES = 'POTATOES',
-  LETTUCE = 'LETTUCE',
-  STRAWBERRIES = 'STRAWBERRIES',
+  ACKEE = 'ACKEE',
+  BANANA = 'BANANA',
+  PLANTAIN = 'PLANTAIN',
+  COFFEE = 'COFFEE',
+  PIMENTO = 'PIMENTO',
+  COCOA = 'COCOA',
+  COCONUT = 'COCONUT',
+  BREADFRUIT = 'BREADFRUIT',
+  MANGO = 'MANGO',
+  GUAVA = 'GUAVA',
+  SOURSOP = 'SOURSOP',
+  PAPAYA = 'PAPAYA',
+  PINEAPPLE = 'PINEAPPLE',
+  WATERMELON = 'WATERMELON',
+  PUMPKIN = 'PUMPKIN',
+  TOMATO = 'TOMATO',
+  CALLALOO = 'CALLALOO',
+  SWEET_POTATO = 'SWEET_POTATO',
+  YAM = 'YAM',
+  CASSAVA = 'CASSAVA',
+  DASHEEN = 'DASHEEN',
+  GINGER = 'GINGER',
+  TURMERIC = 'TURMERIC',
+  HOT_PEPPER_SCOTCH_BONNET = 'HOT_PEPPER_SCOTCH_BONNET',
+  OKRA = 'OKRA',
+  THYME = 'THYME',
+  SCALLION = 'SCALLION',
+  SORREL = 'SORREL',
+  PEANUT = 'PEANUT',
+  GUNGO_PEA = 'GUNGO_PEA',
 }
 
 export interface User {
   id: string;
   address: string;
+  email?: string | null;
   display_name: string;
   role: UserRole;
+  /** True if farmer, false if buyer (stored in DB as is_farmer). */
+  is_farmer: boolean;
   is_verified: boolean;
+  verification_submitted_at?: string | null;
   /** Delivery address for buyers (wholesale). */
   delivery_address?: string | null;
   /** Farmer: total acreage. */
@@ -51,6 +78,14 @@ export interface Order {
   status: OrderStatus;
   filled_by?: string;
   filled_at?: string;
+  /** When buyer placed funds in escrow (dev: in-app action). */
+  escrow_funded_at?: string | null;
+  /** When seller attested delivery. */
+  delivered_at?: string | null;
+  /** When buyer contested delivery (dispute). */
+  contested_at?: string | null;
+  /** When funds were released to seller. */
+  funds_released_at?: string | null;
   created_at: string;
 }
 
@@ -92,34 +127,4 @@ export interface HeatMapCell {
   gap: number;
   avg_bid_price: number;
   avg_ask_price: number;
-}
-
-export interface PlantRecommendation {
-  crop_type: CropType;
-  total_demand: number;
-  avg_bid_price: number;
-  projected_revenue_per_acre: number;
-  yield_per_acre: number;
-  demand_supply_ratio: number;
-}
-
-export interface HedgeFlowCalculation {
-  crop_type: CropType;
-  acreage: number;
-  expected_yield: number;
-  recommended_price: number;
-  projected_revenue: number;
-}
-
-export interface ServerToClientEvents {
-  'order:created': (order: Order) => void;
-  'order:filled': (order: Order) => void;
-  'order:cancelled': (order: Order) => void;
-  'voucher:listed': (voucher: FutureVoucher) => void;
-  'voucher:sold': (voucher: FutureVoucher) => void;
-}
-
-export interface ClientToServerEvents {
-  'subscribe:orderbook': (filters?: { crop_type?: CropType; delivery_date?: string }) => void;
-  'unsubscribe:orderbook': () => void;
 }

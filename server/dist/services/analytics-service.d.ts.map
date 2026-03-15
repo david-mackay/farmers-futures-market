@@ -1,0 +1,1 @@
+{"version":3,"file":"analytics-service.d.ts","sourceRoot":"","sources":["../../src/services/analytics-service.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,WAAW,EAAE,mBAAmB,EAAE,oBAAoB,EAAE,QAAQ,EAA0B,MAAM,uBAAuB,CAAC;AAGjI,wBAAgB,UAAU,IAAI,WAAW,EAAE,CAwB1C;AAED,wBAAgB,uBAAuB,IAAI,mBAAmB,EAAE,CA4B/D;AAED,wBAAgB,gBAAgB,CAAC,QAAQ,EAAE,QAAQ,EAAE,OAAO,EAAE,MAAM,GAAG,oBAAoB,CAmB1F"}

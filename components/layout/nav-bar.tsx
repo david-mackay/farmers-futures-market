@@ -2,11 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, LogOut } from 'lucide-react';
+import { useDisconnect } from 'wagmi';
+import { AppKitButton } from '@reown/appkit/react';
 import { useUser } from '@/hooks/use-user';
 import { useDevMode } from '@/hooks/use-dev-mode';
 import { useTheme } from '@/contexts/theme-context';
 import { Badge } from '@/components/ui/badge';
+import { appkitProjectId } from '@/config/appkit-config';
 
 const NAV_LINKS = [
   { href: '/', label: 'Dashboard' },
@@ -17,7 +20,8 @@ const NAV_LINKS = [
 
 export function NavBar() {
   const pathname = usePathname();
-  const { user, users, switchUser } = useUser();
+  const { user } = useUser();
+  const { disconnect } = useDisconnect();
   const devMode = useDevMode();
   const { theme, toggleTheme } = useTheme();
 
@@ -75,25 +79,29 @@ export function NavBar() {
                 DEV
               </span>
             )}
+            {appkitProjectId && !user && (
+              <AppKitButton />
+            )}
             {user && (
               <>
-                <Badge variant={user.role === 'FARMER' ? 'farmer' : 'trader'}>
-                  {user.role}
+                <Badge variant={user.is_farmer ? 'farmer' : 'trader'}>
+                  {user.is_farmer ? 'Farmer' : 'Buyer'}
                 </Badge>
-                {user.is_verified && <span className="hidden sm:inline"><Badge variant="verified">Verified</Badge></span>}
+                {user.is_verified && user.is_farmer && (
+                  <span className="hidden sm:inline"><Badge variant="verified">Verified</Badge></span>
+                )}
+                <span className="text-sm text-foreground truncate max-w-[6rem] sm:max-w-[8rem]" title={user.display_name}>
+                  {user.display_name}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => disconnect()}
+                  className="p-2 rounded-lg text-muted hover:text-foreground hover:bg-muted-bg transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 touch-manipulation"
+                  aria-label="Sign out"
+                >
+                  <LogOut className="w-5 h-5" strokeWidth={2} aria-hidden />
+                </button>
               </>
-            )}
-            {devMode && users.length > 0 && (
-              <select
-                value={user?.id || ''}
-                onChange={(e) => switchUser(e.target.value)}
-                className="text-xs sm:text-sm border border-border rounded-lg px-1.5 sm:px-2 py-1 sm:py-1.5 bg-card text-foreground cursor-pointer transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 max-w-[7rem] sm:max-w-none"
-                aria-label="Switch user"
-              >
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>{u.display_name}</option>
-                ))}
-              </select>
             )}
           </div>
         </div>

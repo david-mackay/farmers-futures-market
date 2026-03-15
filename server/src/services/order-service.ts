@@ -3,8 +3,38 @@ import { v4 as uuid } from 'uuid';
 import { Order, OrderType, OrderStatus, FutureVoucher, UserRole } from '../../../shared/types';
 import { getUserById } from './user-service';
 
+const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
+
 function rowToOrder(row: any): Order {
-  return { ...row, filled_by: row.filled_by || undefined, filled_at: row.filled_at || undefined };
+  return {
+    ...row,
+    filled_by: row.filled_by || undefined,
+    filled_at: row.filled_at || undefined,
+    escrow_funded_at: row.escrow_funded_at ?? undefined,
+    delivered_at: row.delivered_at ?? undefined,
+    contested_at: row.contested_at ?? undefined,
+    funds_released_at: row.funds_released_at ?? undefined,
+  };
+}
+
+function getBuyerId(order: Order): string {
+  return order.type === OrderType.ASK ? (order.filled_by!) : order.creator_id;
+}
+
+function getSellerId(order: Order): string {
+  return order.type === OrderType.ASK ? order.creator_id : (order.filled_by!);
+}
+
+/** If order is delivered and 2 days passed with no contest, set funds_released_at. Returns updated order. */
+function applyAutoRelease(order: Order): Order {
+  if (order.status !== OrderStatus.FILLED || !order.delivered_at || order.contested_at || order.funds_released_at) {
+    return order;
+  }
+  const delivered = new Date(order.delivered_at).getTime();
+  if (Date.now() - delivered < TWO_DAYS_MS) return order;
+  const now = new Date().toISOString();
+  db.prepare('UPDATE orders SET funds_released_at = ? WHERE id = ?').run(now, order.id);
+  return { ...order, funds_released_at: now };
 }
 
 function rowToVoucher(row: any): FutureVoucher {
@@ -34,12 +64,15 @@ export function getOrders(filters: OrderFilters = {}): Order[] {
   if (filters.filled_by) { sql += ' AND filled_by = ?'; params.push(filters.filled_by); }
 
   sql += ' ORDER BY created_at DESC';
-  return (db.prepare(sql).all(...params) as any[]).map(rowToOrder);
+  const orders = (db.prepare(sql).all(...params) as any[]).map(rowToOrder);
+  return orders.map((o) => applyAutoRelease(o));
 }
 
 export function getOrderById(id: string): Order | undefined {
   const row = db.prepare('SELECT * FROM orders WHERE id = ?').get(id) as any;
-  return row ? rowToOrder(row) : undefined;
+  if (!row) return undefined;
+  const order = rowToOrder(row);
+  return applyAutoRelease(order);
 }
 
 export function createOrder(
@@ -94,6 +127,70 @@ export function cancelOrder(userId: string, orderId: string): { order?: Order; e
   if (order.creator_id !== userId) return { error: 'Only the creator can cancel this order' };
 
   db.prepare('UPDATE orders SET status = ? WHERE id = ?').run(OrderStatus.CANCELLED, orderId);
+  return { order: getOrderById(orderId)! };
+}
+
+export function fundEscrow(userId: string, orderId: string): { order?: Order; error?: string } {
+  const order = getOrderById(orderId);
+  if (!order) return { error: 'Order not found' };
+  if (order.status !== OrderStatus.FILLED) return { error: 'Order is not filled' };
+  if (getBuyerId(order) !== userId) return { error: 'Only the buyer can fund escrow' };
+  if (order.escrow_funded_at) return { error: 'Escrow already funded' };
+  const now = new Date().toISOString();
+  db.prepare('UPDATE orders SET escrow_funded_at = ? WHERE id = ?').run(now, orderId);
+  return { order: getOrderById(orderId)! };
+}
+
+export function attestDelivery(userId: string, orderId: string): { order?: Order; error?: string } {
+  const order = getOrderById(orderId);
+  if (!order) return { error: 'Order not found' };
+  if (order.status !== OrderStatus.FILLED) return { error: 'Order is not filled' };
+  if (getSellerId(order) !== userId) return { error: 'Only the seller can attest delivery' };
+  if (!order.escrow_funded_at) return { error: 'Escrow must be funded before seller can attest delivery' };
+  if (order.delivered_at) return { error: 'Delivery already attested' };
+  const now = new Date().toISOString();
+  db.prepare('UPDATE orders SET delivered_at = ? WHERE id = ?').run(now, orderId);
+  return { order: getOrderById(orderId)! };
+}
+
+export function confirmReceipt(userId: string, orderId: string): { order?: Order; error?: string } {
+  const order = getOrderById(orderId);
+  if (!order) return { error: 'Order not found' };
+  if (order.status !== OrderStatus.FILLED) return { error: 'Order is not filled' };
+  if (getBuyerId(order) !== userId) return { error: 'Only the buyer can confirm receipt' };
+  if (!order.delivered_at) return { error: 'Seller must attest delivery first' };
+  if (order.contested_at) return { error: 'Order is contested; wait for resolution' };
+  if (order.funds_released_at) return { error: 'Funds already released' };
+  const now = new Date().toISOString();
+  db.prepare('UPDATE orders SET funds_released_at = ? WHERE id = ?').run(now, orderId);
+  return { order: getOrderById(orderId)! };
+}
+
+export function contestDelivery(userId: string, orderId: string): { order?: Order; error?: string } {
+  const order = getOrderById(orderId);
+  if (!order) return { error: 'Order not found' };
+  if (order.status !== OrderStatus.FILLED) return { error: 'Order is not filled' };
+  if (getBuyerId(order) !== userId) return { error: 'Only the buyer can contest delivery' };
+  if (!order.delivered_at) return { error: 'Cannot contest before seller attests delivery' };
+  if (order.funds_released_at) return { error: 'Funds already released' };
+  if (order.contested_at) return { error: 'Already contested' };
+  const now = new Date().toISOString();
+  db.prepare('UPDATE orders SET contested_at = ? WHERE id = ?').run(now, orderId);
+  return { order: getOrderById(orderId)! };
+}
+
+/** Platform resolves dispute: release to seller or (for dev) leave contested for manual refund. */
+export function resolveDispute(orderId: string, resolution: 'release' | 'refund'): { order?: Order; error?: string } {
+  const order = getOrderById(orderId);
+  if (!order) return { error: 'Order not found' };
+  if (order.status !== OrderStatus.FILLED) return { error: 'Order is not filled' };
+  if (!order.contested_at) return { error: 'Order is not contested' };
+  if (order.funds_released_at) return { error: 'Funds already released' };
+  if (resolution === 'release') {
+    const now = new Date().toISOString();
+    db.prepare('UPDATE orders SET funds_released_at = ? WHERE id = ?').run(now, orderId);
+    return { order: getOrderById(orderId)! };
+  }
   return { order: getOrderById(orderId)! };
 }
 

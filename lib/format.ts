@@ -1,5 +1,5 @@
 import { CropType } from '@/shared/types';
-import { CROP_LABELS, CROP_UNIT } from '@/shared/constants';
+import { CROP_LABELS, CROP_UNIT, CONTRACT_DELIVERY_DAYS } from '@/shared/constants';
 
 const CURRENCY_SYMBOL = 'J$';
 
@@ -56,36 +56,48 @@ export function getDeliveryMonthOptions(): { value: string; label: string }[] {
   return options;
 }
 
-/** All contracts end on a Monday. Return YYYY-MM-DD for the next N Mondays (including today if today is Monday). */
-export function getNextMondays(count: number): string[] {
+/** Return YYYY-MM-DD for the next N contract delivery days (from CONTRACT_DELIVERY_DAYS). Includes today if today is a contract day. */
+export function getNextContractDays(count: number): string[] {
   const out: string[] = [];
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  let d = new Date(today);
-  const day = d.getDay();
-  const daysUntilMonday = day === 0 ? 1 : day === 1 ? 0 : 8 - day;
-  d.setDate(d.getDate() + daysUntilMonday);
-  for (let i = 0; i < count; i++) {
-    out.push(
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    );
-    d.setDate(d.getDate() + 7);
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  let d = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const set = new Set(CONTRACT_DELIVERY_DAYS);
+  for (let i = 0; i < 365 && out.length < count; i++) {
+    if (set.has(d.getDay())) {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+      if (dateStr >= todayStr) out.push(dateStr);
+    }
+    d.setDate(d.getDate() + 1);
   }
-  return out;
+  return out.slice(0, count);
 }
 
-/** Check if a date string (YYYY-MM-DD) is a Monday. */
-export function isMonday(dateStr: string): boolean {
+/** @deprecated Use getNextContractDays. */
+export function getNextMondays(count: number): string[] {
+  return getNextContractDays(count);
+}
+
+/** Check if a date string (YYYY-MM-DD) is a contract delivery day. */
+export function isContractDay(dateStr: string): boolean {
   const d = new Date(dateStr + 'T00:00:00');
-  return d.getDay() === 1;
+  return CONTRACT_DELIVERY_DAYS.includes(d.getDay());
 }
 
-/** Among Monday dates with at least one order, return the one closest to today (>= today). If none, return next Monday. */
+/** @deprecated Use isContractDay. */
+export function isMonday(dateStr: string): boolean {
+  return isContractDay(dateStr);
+}
+
+/** Among contract-day dates with at least one order, return the one closest to today (>= today). If none, return next contract day. */
 export function getDefaultDeliveryDate(orders: { delivery_date: string }[]): string {
   const today = new Date().toISOString().slice(0, 10);
-  const mondaysWithOrders = [...new Set(orders.map((o) => o.delivery_date).filter(isMonday))].filter((d) => d >= today).sort();
-  if (mondaysWithOrders.length > 0) return mondaysWithOrders[0];
-  return getNextMondays(1)[0];
+  const validWithOrders = [...new Set(orders.map((o) => o.delivery_date).filter(isContractDay))].filter((d) => d >= today).sort();
+  if (validWithOrders.length > 0) return validWithOrders[0];
+  return getNextContractDays(1)[0];
 }
 
 export function cropLabel(cropType: CropType): string {

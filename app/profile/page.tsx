@@ -13,6 +13,7 @@ import { Select } from '@/components/ui/select';
 import { formatPrice, formatDeliveryDate, formatKg } from '@/lib/format';
 import { CropType } from '@/shared/types';
 import { Pencil, X } from 'lucide-react';
+import { VerificationModal } from '@/components/verification-modal';
 
 function parseCropsProduced(raw: string | null | undefined): CropType[] {
   if (!raw || !raw.trim()) return [];
@@ -29,11 +30,13 @@ export default function ProfilePage() {
   const { add: addToWatchlist } = useWatchedCrops();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState<'delivery' | 'farmer' | null>(null);
+  const [editing, setEditing] = useState<'name' | 'delivery' | 'farmer' | null>(null);
+  const [displayName, setDisplayName] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [acreage, setAcreage] = useState('');
   const [cropList, setCropList] = useState<CropType[]>([]);
   const [addCropValue, setAddCropValue] = useState('');
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -42,23 +45,31 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
+      setDisplayName(user.display_name);
       setDeliveryAddress(user.delivery_address ?? '');
       setAcreage(user.acreage != null ? String(user.acreage) : '');
       setCropList(parseCropsProduced(user.crops_produced));
     }
   }, [user]);
 
-  const toggleVerification = async () => {
+  const submitVerification = async () => {
     if (!user) return;
-    await api.patch(`/api/users/${user.id}`, { is_verified: !user.is_verified });
+    await api.post(`/api/users/${user.id}/verify`, {});
     await refreshUser();
   };
 
-  const toggleRole = async () => {
+  const toggleIsFarmer = async () => {
     if (!user) return;
-    const newRole = user.role === 'FARMER' ? 'TRADER' : 'FARMER';
-    await api.patch(`/api/users/${user.id}`, { role: newRole });
+    await api.patch(`/api/users/${user.id}`, { is_farmer: !user.is_farmer });
     await refreshUser();
+  };
+
+  const saveDisplayName = async () => {
+    if (!user) return;
+    const name = displayName.trim() || user.display_name;
+    await api.patch(`/api/users/${user.id}`, { display_name: name });
+    await refreshUser();
+    setEditing(null);
   };
 
   const saveDeliveryAddress = async () => {
@@ -95,32 +106,72 @@ export default function ProfilePage() {
     [cropList]
   );
 
-  if (!user) return <div className="text-center py-12 text-muted">Loading profile...</div>;
+  if (loading) return <div className="text-center py-12 text-muted">Loading profile...</div>;
+  if (!user) return <div className="text-center py-12 text-muted">Sign in to view your profile.</div>;
 
   return (
     <div className="flex flex-col min-h-0">
-      {/* Identity: full-width section, thin border below */}
+      <VerificationModal
+        open={showVerifyModal}
+        onClose={() => setShowVerifyModal(false)}
+        onSubmit={submitVerification}
+      />
+
+      {/* Identity */}
       <section className="border-b border-border bg-card">
         <div className="px-4 sm:px-6 py-4">
           <h1 className="text-xl sm:text-2xl font-bold text-foreground">Profile</h1>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Badge variant={user.role === 'FARMER' ? 'farmer' : 'trader'}>{user.role}</Badge>
-            {user.is_verified && <Badge variant="verified">Verified Farmer</Badge>}
+            <Badge variant={user.is_farmer ? 'farmer' : 'trader'}>
+              {user.is_farmer ? 'Farmer' : 'Buyer'}
+            </Badge>
+            {user.is_verified && user.is_farmer && <Badge variant="verified">Verified Farmer</Badge>}
           </div>
-          <p className="text-muted text-sm font-mono break-all mt-2">{user.display_name}</p>
-          <p className="text-muted text-xs font-mono break-all">{user.address}</p>
+
+          <div className="mt-3">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-medium text-foreground">Name or business name</h2>
+              {editing !== 'name' ? (
+                <button
+                  type="button"
+                  onClick={() => setEditing('name')}
+                  className="p-2 text-muted hover:text-foreground touch-manipulation"
+                  aria-label="Edit name"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+              ) : null}
+            </div>
+            {editing === 'name' ? (
+              <div className="mt-2 flex gap-2">
+                <Input
+                  label=""
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Your name or business name"
+                  className="flex-1"
+                />
+                <Button size="sm" onClick={saveDisplayName} className="min-h-[2.5rem] shrink-0">
+                  Save
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => { setEditing(null); setDisplayName(user.display_name); }} className="min-h-[2.5rem]">
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <p className="text-muted text-sm font-mono break-all mt-1">{user.display_name}</p>
+            )}
+          </div>
+          <p className="text-muted text-xs font-mono break-all mt-1">{user.address}</p>
+          {user.email && <p className="text-muted text-xs font-mono break-all">{user.email}</p>}
+
           <div className="flex flex-wrap gap-2 mt-3">
-            <Button variant="outline" size="sm" onClick={toggleRole} className="min-h-[2.5rem] touch-manipulation">
-              Switch to {user.role === 'FARMER' ? 'Trader' : 'Farmer'}
+            <Button variant="outline" size="sm" onClick={toggleIsFarmer} className="min-h-[2.5rem] touch-manipulation">
+              I&apos;m a {user.is_farmer ? 'Buyer' : 'Farmer'}
             </Button>
-            {user.role === 'FARMER' && (
-              <Button
-                variant={user.is_verified ? 'danger' : 'primary'}
-                size="sm"
-                onClick={toggleVerification}
-                className="min-h-[2.5rem] touch-manipulation"
-              >
-                {user.is_verified ? 'Remove Verification' : 'Verify as Farmer'}
+            {user.is_farmer && !user.is_verified && (
+              <Button size="sm" onClick={() => setShowVerifyModal(true)} className="min-h-[2.5rem] touch-manipulation">
+                Get verified
               </Button>
             )}
           </div>
@@ -169,7 +220,7 @@ export default function ProfilePage() {
       </section>
 
       {/* Farmer: acreage & crops produced */}
-      {user.role === 'FARMER' && (
+      {user.is_farmer && (
         <section className="border-b border-border">
           <div className="px-4 sm:px-6 py-4">
             <div className="flex items-center justify-between gap-2">

@@ -1,10 +1,10 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
-import { getNextMondays, formatDeliveryDate } from '@/lib/format';
+import { getNextContractDays, formatDeliveryDate } from '@/lib/format';
 import { Modal } from '@/components/ui/modal';
 
-const MONDAYS = getNextMondays(52);
+const CONTRACT_DAYS = getNextContractDays(52);
 
 interface DeliveryDateModalProps {
   open: boolean;
@@ -13,7 +13,7 @@ interface DeliveryDateModalProps {
   onSelect: (date: string) => void;
 }
 
-/** Robinhood-style modal: horizontal scrollable list of Mondays, one selected with underline. */
+/** Robinhood-style modal: horizontal scrollable list of contract delivery dates, one selected with underline. */
 export function DeliveryDateModal({
   open,
   onClose,
@@ -30,9 +30,9 @@ export function DeliveryDateModal({
 
   return (
     <Modal open={open} onClose={onClose} title="Delivery date">
-      <p className="text-sm text-muted mb-3">All contracts end on a Monday.</p>
+      <p className="text-sm text-muted mb-3">Select a contract delivery date.</p>
       <div className="overflow-x-auto -mx-1 pb-2 flex gap-1">
-        {MONDAYS.map((date) => {
+        {CONTRACT_DAYS.map((date) => {
           const selected = date === selectedDate;
           return (
             <button
@@ -61,4 +61,4 @@ export function DeliveryDateModal({
   );
 }
 
-export { MONDAYS as DELIVERY_MONDAY_OPTIONS };
+export { CONTRACT_DAYS as DELIVERY_DATE_OPTIONS };

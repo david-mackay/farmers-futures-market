@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AppKitProvider } from "@/contexts/appkit-provider";
 import { Providers } from "./providers";
 
 const geistSans = Geist({
@@ -25,11 +27,14 @@ export const viewport = {
   userScalable: true,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = await headers();
+  const cookieStore = headersList.get("cookie");
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -40,9 +45,11 @@ export default function RootLayout({
         />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <Providers>
-          {children}
-        </Providers>
+        <AppKitProvider cookies={cookieStore}>
+          <Providers>
+            {children}
+          </Providers>
+        </AppKitProvider>
       </body>
     </html>
   );

@@ -42,3 +42,9 @@ next-env.d.ts
 
 # sqlite
 server/data/*.db
+
+# shared/ build output (source is .ts; .js/.d.ts/.map are emitted by build)
+shared/*.js
+shared/*.d.ts
+shared/*.js.map
+shared/*.d.ts.map

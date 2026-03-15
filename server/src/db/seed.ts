@@ -1,63 +1,57 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { v4 as uuid } from 'uuid';
+import { CONTRACT_DELIVERY_DAYS } from '../../../shared/constants';
 import db from './connection';
 import { CROPS } from './crops';
 
-const USERS = [
-  { id: 'farmer-alice', address: '0xAlice', display_name: 'Alice (Farmer)', role: 'FARMER', is_verified: 1 },
-  { id: 'farmer-bob', address: '0xBob', display_name: 'Bob (Farmer)', role: 'FARMER', is_verified: 0 },
-  { id: 'trader-carol', address: '0xCarol', display_name: 'Carol (Grocer)', role: 'TRADER', is_verified: 0 },
-  { id: 'trader-dave', address: '0xDave', display_name: 'Dave (Grocer)', role: 'TRADER', is_verified: 0 },
-];
+const SEED_FARMER_ID = 'seed-farmer-001';
+const SEED_FARMER_ADDRESS = '0xseed00000000000000000000000000000000000001';
+const SEED_BUYER_ID = 'seed-buyer-002';
+const SEED_BUYER_ADDRESS = '0xseed00000000000000000000000000000000000002';
 
-// All delivery dates are Mondays (contracts end on Monday).
-// quantity = kg; price = J$ per kg.
-const ORDERS = [
-  // Wheat — Mon Jul 13, 2026
-  { id: uuid(), creator_id: 'farmer-alice', crop_type: 'WHEAT', type: 'ASK', price: 7.20, quantity: 500, delivery_date: '2026-07-13', status: 'OPEN' },
-  { id: uuid(), creator_id: 'farmer-alice', crop_type: 'WHEAT', type: 'ASK', price: 7.35, quantity: 300, delivery_date: '2026-07-13', status: 'OPEN' },
-  { id: uuid(), creator_id: 'trader-carol', crop_type: 'WHEAT', type: 'BID', price: 7.00, quantity: 400, delivery_date: '2026-07-13', status: 'OPEN' },
-  { id: uuid(), creator_id: 'trader-dave', crop_type: 'WHEAT', type: 'BID', price: 6.90, quantity: 200, delivery_date: '2026-07-13', status: 'OPEN' },
+interface JamaicanCrop {
+  common_name: string;
+  display_name: string;
+  wholesale_price_jmd_per_kg: number;
+  yield_kg_per_hectare: number;
+}
 
-  // Wheat — Mon Aug 17, 2026
-  { id: uuid(), creator_id: 'farmer-alice', crop_type: 'WHEAT', type: 'ASK', price: 7.50, quantity: 400, delivery_date: '2026-08-17', status: 'OPEN' },
-  { id: uuid(), creator_id: 'trader-dave', crop_type: 'WHEAT', type: 'BID', price: 7.30, quantity: 600, delivery_date: '2026-08-17', status: 'OPEN' },
-  { id: uuid(), creator_id: 'trader-carol', crop_type: 'WHEAT', type: 'BID', price: 7.10, quantity: 200, delivery_date: '2026-08-17', status: 'OPEN' },
+/** Next N contract delivery days (CONTRACT_DELIVERY_DAYS) as YYYY-MM-DD, from today onward. */
+function getNextContractDays(count: number): string[] {
+  const out: string[] = [];
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  const set = new Set(CONTRACT_DELIVERY_DAYS);
+  let d = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  for (let i = 0; i < 365 && out.length < count; i++) {
+    if (set.has(d.getDay())) {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+      if (dateStr >= todayStr) out.push(dateStr);
+    }
+    d.setDate(d.getDate() + 1);
+  }
+  return out.slice(0, count);
+}
 
-  // Corn — Mon Aug 24, 2026
-  { id: uuid(), creator_id: 'farmer-alice', crop_type: 'CORN', type: 'ASK', price: 5.80, quantity: 1000, delivery_date: '2026-08-24', status: 'OPEN' },
-  { id: uuid(), creator_id: 'farmer-alice', crop_type: 'CORN', type: 'ASK', price: 5.95, quantity: 500, delivery_date: '2026-08-24', status: 'OPEN' },
-  { id: uuid(), creator_id: 'trader-dave', crop_type: 'CORN', type: 'BID', price: 5.60, quantity: 800, delivery_date: '2026-08-24', status: 'OPEN' },
-
-  // Corn — Mon Sep 7, 2026
-  { id: uuid(), creator_id: 'trader-carol', crop_type: 'CORN', type: 'BID', price: 5.90, quantity: 1200, delivery_date: '2026-09-07', status: 'OPEN' },
-  { id: uuid(), creator_id: 'trader-dave', crop_type: 'CORN', type: 'BID', price: 5.75, quantity: 400, delivery_date: '2026-09-07', status: 'OPEN' },
-
-  // Soybeans — Mon Sep 14, 2026
-  { id: uuid(), creator_id: 'farmer-alice', crop_type: 'SOYBEANS', type: 'ASK', price: 13.50, quantity: 200, delivery_date: '2026-09-14', status: 'OPEN' },
-  { id: uuid(), creator_id: 'trader-carol', crop_type: 'SOYBEANS', type: 'BID', price: 13.80, quantity: 300, delivery_date: '2026-09-14', status: 'OPEN' },
-  { id: uuid(), creator_id: 'trader-dave', crop_type: 'SOYBEANS', type: 'BID', price: 13.20, quantity: 100, delivery_date: '2026-09-14', status: 'OPEN' },
-
-  // Tomatoes — Mon Jun 30, 2026
-  { id: uuid(), creator_id: 'farmer-alice', crop_type: 'TOMATOES', type: 'ASK', price: 2.10, quantity: 800, delivery_date: '2026-06-30', status: 'OPEN' },
-  { id: uuid(), creator_id: 'trader-dave', crop_type: 'TOMATOES', type: 'BID', price: 2.30, quantity: 1200, delivery_date: '2026-06-30', status: 'OPEN' },
-  { id: uuid(), creator_id: 'trader-carol', crop_type: 'TOMATOES', type: 'BID', price: 2.15, quantity: 500, delivery_date: '2026-06-30', status: 'OPEN' },
-
-  // Strawberries — Mon Jun 15, 2026
-  { id: uuid(), creator_id: 'farmer-alice', crop_type: 'STRAWBERRIES', type: 'ASK', price: 3.50, quantity: 600, delivery_date: '2026-06-15', status: 'OPEN' },
-  { id: uuid(), creator_id: 'trader-carol', crop_type: 'STRAWBERRIES', type: 'BID', price: 3.80, quantity: 1000, delivery_date: '2026-06-15', status: 'OPEN' },
-  { id: uuid(), creator_id: 'trader-dave', crop_type: 'STRAWBERRIES', type: 'BID', price: 3.60, quantity: 400, delivery_date: '2026-06-15', status: 'OPEN' },
-
-  // Rice — Mon Oct 12, 2026
-  { id: uuid(), creator_id: 'farmer-alice', crop_type: 'RICE', type: 'ASK', price: 15.00, quantity: 300, delivery_date: '2026-10-12', status: 'OPEN' },
-  { id: uuid(), creator_id: 'trader-dave', crop_type: 'RICE', type: 'BID', price: 15.50, quantity: 500, delivery_date: '2026-10-12', status: 'OPEN' },
-
-  // Filled order for demo — Mon Jun 22, 2026
-  { id: 'filled-order-1', creator_id: 'farmer-alice', crop_type: 'LETTUCE', type: 'ASK', price: 1.80, quantity: 400, delivery_date: '2026-06-22', status: 'FILLED', filled_by: 'trader-carol' },
-];
+/** common_name to crop_type (UPPER_SNAKE) for orders table. */
+function toCropType(commonName: string): string {
+  return commonName.toUpperCase().replace(/-/g, '_');
+}
 
 function seed() {
+  const jsonPath = path.join(__dirname, '../../../jamaican_crops.json');
+  if (!fs.existsSync(jsonPath)) {
+    console.error('jamaican_crops.json not found at', jsonPath);
+    process.exit(1);
+  }
+  const crops: JamaicanCrop[] = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+  const deliveryDates = getNextContractDays(4);
+
   const run = db.transaction(() => {
-    // Clear in FK order: vouchers → orders → users, plus crop catalog (portable SQL, no shell)
     db.exec('DELETE FROM vouchers');
     db.exec('DELETE FROM orders');
     db.exec('DELETE FROM users');
@@ -116,23 +110,67 @@ function seed() {
       );
     }
 
-    const insertUser = db.prepare(
-      'INSERT INTO users (id, address, display_name, role, is_verified) VALUES (?, ?, ?, ?, ?)'
-    );
-    for (const u of USERS) {
-      insertUser.run(u.id, u.address, u.display_name, u.role, u.is_verified);
-    }
+    const now = new Date().toISOString();
+    db.prepare(
+      `INSERT INTO users (id, address, email, display_name, role, is_farmer, is_verified, created_at)
+       VALUES (?, ?, NULL, ?, 'FARMER', 1, 1, ?)`
+    ).run(SEED_FARMER_ID, SEED_FARMER_ADDRESS, 'Seed Farmer', now);
+
+    db.prepare(
+      `INSERT INTO users (id, address, email, display_name, role, is_farmer, is_verified, created_at)
+       VALUES (?, ?, NULL, ?, 'TRADER', 0, 0, ?)`
+    ).run(SEED_BUYER_ID, SEED_BUYER_ADDRESS, 'Seed Buyer', now);
 
     const insertOrder = db.prepare(
-      'INSERT INTO orders (id, creator_id, crop_type, type, price, quantity, delivery_date, status, filled_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      `INSERT INTO orders (id, creator_id, crop_type, type, price, quantity, delivery_date, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'OPEN', ?)`
     );
-    for (const o of ORDERS) {
-      insertOrder.run(o.id, o.creator_id, o.crop_type, o.type, o.price, o.quantity, o.delivery_date, o.status, (o as any).filled_by || null);
+
+    const quantities = [100, 250, 500, 1000];
+    let orderIndex = 0;
+    for (const crop of crops) {
+      const cropType = toCropType(crop.common_name);
+      const askPrice = crop.wholesale_price_jmd_per_kg;
+      for (let m = 0; m < deliveryDates.length; m++) {
+        const qty = quantities[orderIndex % quantities.length];
+        insertOrder.run(
+          uuid(),
+          SEED_FARMER_ID,
+          cropType,
+          'ASK',
+          askPrice,
+          qty,
+          deliveryDates[m],
+          now
+        );
+        orderIndex++;
+      }
+    }
+
+    for (const crop of crops) {
+      const cropType = toCropType(crop.common_name);
+      const bidPrice = Math.round(crop.wholesale_price_jmd_per_kg * 0.9);
+      if (bidPrice <= 0) continue;
+      for (let m = 0; m < deliveryDates.length; m++) {
+        insertOrder.run(
+          uuid(),
+          SEED_BUYER_ID,
+          cropType,
+          'BID',
+          bidPrice,
+          quantities[orderIndex % quantities.length],
+          deliveryDates[m],
+          now
+        );
+        orderIndex++;
+      }
     }
   });
 
   run();
-  console.log(`Seeded: ${CROPS.length} crops, ${USERS.length} users, ${ORDERS.length} orders (Monday delivery only, no vouchers)`);
+  console.log(
+    `Seeded: ${CROPS.length} crops, 2 users, ${crops.length * deliveryDates.length * 2} OPEN orders (ASK + BID) with JMD/kg from jamaican_crops.json.`
+  );
 }
 
 seed();

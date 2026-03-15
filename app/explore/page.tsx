@@ -12,7 +12,7 @@ import { OrderForm } from '@/components/order-book/order-form';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { CropNameLink } from '@/components/crop-name-link';
-import { formatDeliveryDate, getDefaultDeliveryDate, isMonday } from '@/lib/format';
+import { formatDeliveryDate, getDefaultDeliveryDate, isContractDay } from '@/lib/format';
 import Link from 'next/link';
 
 const ALL_CROPS = Object.values(CropType) as CropType[];
@@ -48,23 +48,26 @@ export default function ExplorePage() {
   );
   const { orders: ordersForDefault } = useOrders(filtersForDefault);
 
-  const defaultMonday = useMemo(
-    () => getDefaultDeliveryDate(ordersForDefault),
-    [ordersForDefault]
+  const defaultDeliveryDateVal = useMemo(() => getDefaultDeliveryDate(ordersForDefault), [ordersForDefault]);
+
+  const ordersMatchCrop = useMemo(
+    () => ordersForDefault.length > 0 && ordersForDefault[0].crop_type === selectedCrop,
+    [ordersForDefault, selectedCrop]
   );
 
   const datesWithOrders = useMemo(() => {
-    const dates = [...new Set(ordersForDefault.map((o) => o.delivery_date).filter(isMonday))].filter(
-      (d) => d >= new Date().toISOString().slice(0, 10)
-    ).sort();
+    if (!ordersMatchCrop) return [];
+    const dates = [...new Set(ordersForDefault.map((o) => o.delivery_date).filter(isContractDay))]
+      .filter((d) => d >= new Date().toISOString().slice(0, 10))
+      .sort();
     return dates;
-  }, [ordersForDefault]);
+  }, [ordersForDefault, ordersMatchCrop]);
 
   useEffect(() => {
-    if (selectedCrop && !deliveryDate && defaultMonday) {
-      setDeliveryDate(defaultMonday);
+    if (selectedCrop && !deliveryDate && defaultDeliveryDateVal && ordersMatchCrop) {
+      setDeliveryDate(defaultDeliveryDateVal);
     }
-  }, [selectedCrop, deliveryDate, defaultMonday]);
+  }, [selectedCrop, deliveryDate, defaultDeliveryDateVal, ordersMatchCrop]);
 
   useEffect(() => {
     if (deliveryDate && selectedDateRef.current && dateStripRef.current) {
@@ -89,7 +92,7 @@ export default function ExplorePage() {
 
   return (
     <div className="flex flex-col min-h-0">
-      <div className="border-b border-border bg-card">
+      <div className="border-b border-border bg-background">
         <div className="px-4 sm:px-6 py-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted pointer-events-none" aria-hidden />
@@ -139,7 +142,7 @@ export default function ExplorePage() {
         </div>
       ) : (
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="border-b border-border bg-card">
+          <div className="border-b border-border bg-background">
             <div className="flex items-center gap-2 px-4 sm:px-6 py-2">
               <button
                 type="button"
@@ -173,27 +176,31 @@ export default function ExplorePage() {
               className="overflow-x-auto border-t border-border bg-muted-bg/30 scrollbar-thin"
               style={{ scrollbarWidth: 'thin' }}
             >
-              <div className="flex gap-0 min-w-max px-4 sm:px-6 py-1">
-                {(datesWithOrders.length > 0 ? datesWithOrders : (defaultMonday ? [defaultMonday] : [])).map((date) => {
-                  const selected = date === deliveryDate;
-                  return (
-                    <button
-                      key={date}
-                      ref={selected ? selectedDateRef : null}
-                      type="button"
-                      onClick={() => setDeliveryDate(date)}
-                      className={`
-                        shrink-0 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-200
-                        border-b-2 -mb-px touch-manipulation
-                        ${selected
-                          ? 'text-primary border-primary'
-                          : 'text-muted border-transparent hover:text-foreground'}
-                      `}
-                    >
-                      {formatDeliveryDate(date)}
-                    </button>
-                  );
-                })}
+              <div className="flex gap-0 min-w-max px-4 sm:px-6 py-1 items-center">
+                {!ordersMatchCrop ? (
+                  <span className="text-sm text-muted py-2">Loading dates…</span>
+                ) : (
+                  (datesWithOrders.length > 0 ? datesWithOrders : (defaultDeliveryDateVal ? [defaultDeliveryDateVal] : [])).map((date) => {
+                    const selected = date === deliveryDate;
+                    return (
+                      <button
+                        key={date}
+                        ref={selected ? selectedDateRef : null}
+                        type="button"
+                        onClick={() => setDeliveryDate(date)}
+                        className={`
+                          shrink-0 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-200
+                          border-b-2 -mb-px touch-manipulation
+                          ${selected
+                            ? 'text-primary border-primary'
+                            : 'text-muted border-transparent hover:text-foreground'}
+                        `}
+                      >
+                        {formatDeliveryDate(date)}
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
@@ -212,7 +219,7 @@ export default function ExplorePage() {
           ) : (
             <div className="flex-1 overflow-auto px-4 sm:px-6 py-4">
               <p className="text-muted text-sm">
-                Select a delivery date (Monday) to see the order book for{' '}
+                Select a delivery date to see the order book for{' '}
                 <CropNameLink
                   cropName={CROP_LABELS[selectedCrop as CropType]}
                   className="font-medium text-foreground hover:text-primary hover:underline"
