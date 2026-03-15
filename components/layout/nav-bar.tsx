@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Sun, Moon, LogOut } from 'lucide-react';
-import { AppKitButton, useAppKitAccount, useDisconnect, useAppKitBalance } from '@reown/appkit/react';
+import { AppKitButton, useDisconnect } from '@reown/appkit/react';
 import { useUser } from '@/hooks/use-user';
 import { useDevMode } from '@/hooks/use-dev-mode';
 import { useTheme } from '@/contexts/theme-context';
@@ -24,44 +24,30 @@ const NAV_LINKS = [
 export function NavBar() {
   const pathname = usePathname();
   const { user } = useUser();
-  const { isConnected } = useAppKitAccount();
   const { disconnect } = useDisconnect();
-  const { fetchBalance } = useAppKitBalance();
-  const [balance, setBalance] = useState<{ formatted: string; symbol: string } | null>(null);
   const devMode = useDevMode();
-
-  useEffect(() => {
-    if (!isConnected) {
-      setBalance(null);
-      return;
-    }
-    fetchBalance()
-      .then((res) => {
-        const data = res && typeof res === 'object' && 'data' in res ? (res as { data?: { formatted?: string; symbol?: string } }).data : undefined;
-        if (data?.formatted != null && data?.symbol != null) {
-          setBalance({ formatted: data.formatted, symbol: data.symbol });
-        } else {
-          setBalance(null);
-        }
-      })
-      .catch(() => setBalance(null));
-  }, [isConnected, fetchBalance]);
   const { theme, toggleTheme } = useTheme();
   const { currency, toggleCurrency } = useCurrency();
 
   return (
-    <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border safe-area-pt" aria-label="Site header">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-12 sm:h-14 md:h-16 min-h-[3rem] sm:min-h-[3.5rem]">
-          {/* Logo: compact on mobile */}
+    <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border safe-area-pt overflow-x-hidden" aria-label="Site header">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 min-w-0">
+        <div className="flex items-center justify-between gap-2 h-12 sm:h-14 md:h-16 min-h-[3rem] sm:min-h-[3.5rem] min-w-0">
+          {/* Logo: single mark on all viewports (Apple-style) */}
           <Link
             href="/"
-            className="flex items-center gap-1.5 sm:gap-2 shrink-0 min-w-0 cursor-pointer transition-opacity duration-200 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+            className="flex items-center gap-2 shrink-0 min-w-0 cursor-pointer transition-opacity duration-200 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
             aria-label="Future's Farmer's Market home"
           >
-            <span className="text-base sm:text-xl font-bold text-primary truncate">Future&apos;s</span>
+            <Image
+              src="/assets/ffm-logo.png"
+              alt=""
+              width={180}
+              height={180}
+              className="h-12 w-12 sm:h-14 sm:w-14 object-contain"
+              priority
+            />
             <span className="text-base sm:text-xl font-bold text-foreground truncate hidden sm:inline">Farmer&apos;s Market</span>
-            <span className="text-base font-bold text-foreground truncate sm:hidden">FFM</span>
           </Link>
 
           {/* Desktop nav links */}
@@ -84,8 +70,8 @@ export function NavBar() {
             })}
           </div>
 
-          {/* Currency + theme toggle + user + dev */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
+          {/* Currency + theme toggle + user + dev — allow shrink on mobile so we don't force horizontal scroll */}
+          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 overflow-hidden shrink">
             <button
               type="button"
               onClick={toggleCurrency}
@@ -117,23 +103,13 @@ export function NavBar() {
             )}
             {user && (
               <>
-                {isConnected && (
-                  <div className="flex items-center gap-2">
-                    <AppKitButton />
-                    {balance && (
-                      <span className="text-sm text-muted whitespace-nowrap" title="Wallet balance">
-                        {balance.formatted} {balance.symbol}
-                      </span>
-                    )}
-                  </div>
-                )}
                 <Badge variant={user.is_farmer ? 'farmer' : 'trader'}>
                   {user.is_farmer ? 'Farmer' : 'Buyer'}
                 </Badge>
                 {user.is_verified && user.is_farmer && (
                   <span className="hidden sm:inline"><Badge variant="verified">Verified</Badge></span>
                 )}
-                <span className="text-sm text-foreground truncate max-w-[6rem] sm:max-w-[8rem]" title={user.display_name}>
+                <span className="text-sm text-foreground truncate max-w-[5rem] sm:max-w-[8rem]" title={user.display_name}>
                   {user.display_name}
                 </span>
                 <button

@@ -17,10 +17,10 @@ export function BottomNav() {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-area-pb"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 w-full max-w-[100vw] bg-card border-t border-border safe-area-pb"
       aria-label="Bottom navigation"
     >
-      <div className="grid grid-cols-5 h-14 min-h-[3.5rem]">
+      <div className="grid grid-cols-5 h-14 min-h-[3.5rem] min-w-0 w-full">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || (href !== '/' && pathname.startsWith(href));
           return (

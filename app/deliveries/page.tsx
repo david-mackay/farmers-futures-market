@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { Package, Truck, ArrowRightLeft } from 'lucide-react';
+import { Package, Truck } from 'lucide-react';
 import { Order } from '@/shared/types';
 import { useUser } from '@/hooks/use-user';
 import { useOrders } from '@/hooks/use-orders';
@@ -40,25 +40,27 @@ export default function DeliveriesPage() {
     return merged.sort((a, b) => a.delivery_date.localeCompare(b.delivery_date));
   }, [filledByMe, createdByMeFilled]);
 
-  const upcoming = useMemo(
-    () => allFilled.filter((o) => o.delivery_date >= today()).sort((a, b) => a.delivery_date.localeCompare(b.delivery_date)),
-    [allFilled]
-  );
-  const pastDeliveries = useMemo(
-    () => allFilled.filter((o) => o.delivery_date < today()).sort((a, b) => b.delivery_date.localeCompare(a.delivery_date)),
-    [allFilled]
-  );
-  const pendingAttestation = useMemo(() => {
+  /** Seller: escrow funded, I need to mark as delivered */
+  const toMarkAsDelivered = useMemo(() => {
     if (!user) return [];
-    return allFilled.filter((o) => {
-      if (o.funds_released_at || o.refunded_at) return false;
-      const asSeller = isSeller(o, user.id);
-      const asBuyer = isBuyer(o, user.id);
-      if (asSeller && o.escrow_funded_at && !o.delivered_at) return true;
-      if (asBuyer && (!o.escrow_funded_at || (o.delivered_at && !o.contested_at))) return true;
-      if (o.contested_at) return true;
-      return false;
-    });
+    return allFilled
+      .filter((o) => !o.funds_released_at && !o.refunded_at && isSeller(o, user.id) && o.escrow_funded_at && !o.delivered_at)
+      .sort((a, b) => a.delivery_date.localeCompare(b.delivery_date));
+  }, [allFilled, user]);
+
+  /** Buyer: need to fund escrow, or confirm/contest receipt, or resolve contest */
+  const toMarkAsReceived = useMemo(() => {
+    if (!user) return [];
+    return allFilled
+      .filter((o) => {
+        if (o.funds_released_at || o.refunded_at) return false;
+        if (!isBuyer(o, user.id)) return false;
+        if (o.contested_at) return true;
+        if (!o.escrow_funded_at) return true;
+        if (o.delivered_at) return true;
+        return false;
+      })
+      .sort((a, b) => a.delivery_date.localeCompare(b.delivery_date));
   }, [allFilled, user]);
 
   const runEscrow = useCallback(
@@ -95,9 +97,9 @@ export default function DeliveriesPage() {
     <div className="flex flex-col min-h-0">
       <section className="border-b border-border">
         <div className="px-4 sm:px-6 py-3">
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Deliveries & attestations</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Deliveries</h1>
           <p className="text-muted text-xs sm:text-sm mt-0.5">
-            Pending attestations and upcoming deliveries to make or receive
+            Mark as delivered or confirm receipt. Past deliveries are on your profile.
           </p>
         </div>
       </section>
@@ -114,17 +116,17 @@ export default function DeliveriesPage() {
         </div>
       ) : (
         <>
-          {pendingAttestation.length > 0 && (
+          {toMarkAsDelivered.length > 0 && (
             <section className="border-b border-border">
               <div className="px-4 sm:px-6 py-3 flex items-center gap-2">
-                <ArrowRightLeft className="w-5 h-5 text-primary" aria-hidden />
+                <Truck className="w-5 h-5 text-primary" aria-hidden />
                 <div>
-                  <h2 className="text-base font-semibold text-foreground">Pending attestations</h2>
-                  <p className="text-xs text-muted mt-0.5">Actions required from you</p>
+                  <h2 className="text-base font-semibold text-foreground">Mark as delivered</h2>
+                  <p className="text-xs text-muted mt-0.5">You’re the seller — mark when shipped/delivered</p>
                 </div>
               </div>
               <ul className="divide-y divide-border">
-                {pendingAttestation.map((order) => (
+                {toMarkAsDelivered.map((order) => (
                   <DeliveryOrderCard
                     key={order.id}
                     order={order}
@@ -136,25 +138,36 @@ export default function DeliveriesPage() {
             </section>
           )}
 
-          <section className="flex-1 overflow-auto">
-            <div className="px-4 sm:px-6 py-3 flex items-center gap-2">
-              <Truck className="w-5 h-5 text-muted" aria-hidden />
-              <div>
-                <h2 className="text-base font-semibold text-foreground">Upcoming & past deliveries</h2>
-                <p className="text-xs text-muted mt-0.5">Filled orders by delivery date</p>
+          {toMarkAsReceived.length > 0 && (
+            <section className="flex-1 overflow-auto border-b border-border">
+              <div className="px-4 sm:px-6 py-3 flex items-center gap-2">
+                <Package className="w-5 h-5 text-primary" aria-hidden />
+                <div>
+                  <h2 className="text-base font-semibold text-foreground">Mark as received</h2>
+                  <p className="text-xs text-muted mt-0.5">You’re the buyer — fund escrow, confirm receipt, or contest</p>
+                </div>
               </div>
+              <ul className="divide-y divide-border">
+                {toMarkAsReceived.map((order) => (
+                  <DeliveryOrderCard
+                    key={order.id}
+                    order={order}
+                    loading={escrowLoading === order.id}
+                    runEscrow={(action, resolution) => runEscrow(order.id, action, resolution)}
+                  />
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {toMarkAsDelivered.length === 0 && toMarkAsReceived.length === 0 && (
+            <div className="px-4 sm:px-6 py-12 text-center border-b border-border">
+              <p className="text-muted text-sm">No pending actions. Past deliveries are in your profile.</p>
+              <Link href="/profile" className="text-primary font-medium hover:underline mt-2 inline-block">
+                View profile
+              </Link>
             </div>
-            <ul className="divide-y divide-border">
-              {[...upcoming, ...pastDeliveries].map((order) => (
-                <DeliveryOrderCard
-                  key={order.id}
-                  order={order}
-                  loading={escrowLoading === order.id}
-                  runEscrow={(action, resolution) => runEscrow(order.id, action, resolution)}
-                />
-              ))}
-            </ul>
-          </section>
+          )}
         </>
       )}
 

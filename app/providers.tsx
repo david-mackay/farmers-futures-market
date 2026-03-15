@@ -26,9 +26,9 @@ function AuthAwareLayout({ children }: { children: ReactNode }) {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
+      <div className="min-h-[100dvh] flex flex-col bg-background overflow-x-hidden">
         <NavBar />
-        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+        <main className="flex-1 min-h-0 w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 overflow-x-hidden">
           <SignInGate />
         </main>
       </div>
@@ -36,7 +36,7 @@ function AuthAwareLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background transition-colors duration-200">
+    <div className="h-[100dvh] min-h-[100dvh] flex flex-col bg-background transition-colors duration-200 overflow-x-hidden">
       {showSignupBonusModal && (
         <SignupBonusModal open onClose={dismissSignupBonusModal} />
       )}
@@ -44,7 +44,7 @@ function AuthAwareLayout({ children }: { children: ReactNode }) {
         <OnboardingModal open user={user} onComplete={refreshUser} />
       )}
       <NavBar />
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-20 sm:pb-6">
+      <main className="flex-1 min-h-0 min-w-0 w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-20 sm:pb-6 overflow-y-auto overflow-x-hidden">
         {children}
       </main>
       <BottomNav />

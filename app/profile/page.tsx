@@ -125,7 +125,7 @@ export default function ProfilePage() {
   if (!user) return <div className="text-center py-12 text-muted">Sign in to view your profile.</div>;
 
   return (
-    <div className="flex flex-col min-h-0">
+    <div className="flex flex-col min-h-0 min-w-0 w-full">
       <VerificationModal
         open={showVerifyModal}
         onClose={() => setShowVerifyModal(false)}
@@ -346,8 +346,8 @@ export default function ProfilePage() {
         </section>
       )}
 
-      {/* Order history: thin dividers between rows */}
-      <section className="border-b border-border flex-1">
+      {/* Order history: thin dividers between rows — min-w-0 so table scrolls inside, not the page */}
+      <section className="border-b border-border flex-1 min-w-0">
         <div className="px-4 sm:px-6 py-3 border-b border-border">
           <h2 className="text-base font-semibold text-foreground">Order history</h2>
         </div>
@@ -356,7 +356,7 @@ export default function ProfilePage() {
         ) : orders.length === 0 ? (
           <div className="py-8 text-center text-muted text-sm">No orders yet.</div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto min-w-0">
             <table className="w-full text-sm min-w-[28rem]">
               <thead>
                 <tr className="border-b border-border text-left">
