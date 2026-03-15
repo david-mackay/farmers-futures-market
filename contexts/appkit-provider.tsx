@@ -15,7 +15,7 @@ const metadata = {
   icons: ['/favicon.ico'],
 };
 
-if (appkitProjectId) {
+if (appkitProjectId && appkitProjectId.trim().length > 0) {
   createAppKit({
     adapters: [solanaAdapter],
     projectId: appkitProjectId,
