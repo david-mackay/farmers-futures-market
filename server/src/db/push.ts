@@ -25,6 +25,7 @@ if (!fs.existsSync(schemaPath)) {
 }
 
 const sql = fs.readFileSync(schemaPath, 'utf-8').trim();
+const migrationsDir = path.join(__dirname, 'migrations');
 
 async function push() {
   const pool = new Pool({ connectionString: DATABASE_URL });
@@ -32,8 +33,20 @@ async function push() {
   try {
     await client.query(sql);
     console.log('Schema applied successfully.');
+
+    if (fs.existsSync(migrationsDir)) {
+      const files = fs.readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort();
+      for (const file of files) {
+        const migrationPath = path.join(migrationsDir, file);
+        const migrationSql = fs.readFileSync(migrationPath, 'utf-8').trim();
+        if (migrationSql) {
+          await client.query(migrationSql);
+          console.log('Migration applied:', file);
+        }
+      }
+    }
   } catch (err) {
-    console.error('Failed to apply schema:', err);
+    console.error('Failed to apply schema/migrations:', err);
     process.exit(1);
   } finally {
     client.release();

@@ -97,7 +97,13 @@ async function apiCreate(
 
 async function apiFill(orderId: string, _side: OrderType): Promise<boolean> {
   const userId = _side === OrderType.BID ? SIM_FARMER_ID : SIM_BUYER_ID;
-  const res = await fetch(`${API_BASE}/api/orders/${orderId}/fill`, {
+  if (_side === OrderType.ASK) {
+    console.log("[sim] Skipping ASK fill; wallet-backed payment flow is required.");
+    return false;
+  }
+  const endpoint =
+    `${API_BASE}/api/orders/${orderId}/accept-bid`;
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-user-id": userId },
   });

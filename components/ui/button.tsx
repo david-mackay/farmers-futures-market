@@ -8,7 +8,7 @@ const variantStyles: Record<Variant, string> = {
   secondary: 'bg-secondary text-foreground hover:bg-secondary-dark shadow-sm',
   danger: 'bg-transparent text-accent-red border border-accent-red/30 hover:bg-accent-red/10',
   ghost: 'bg-transparent text-muted hover:text-foreground hover:bg-muted-bg',
-  outline: 'bg-transparent border border-primary/40 text-primary hover:bg-primary/5',
+  outline: 'bg-transparent border-2 border-primary text-primary hover:bg-primary/10',
 };
 
 const sizeStyles: Record<Size, string> = {

@@ -218,8 +218,8 @@ function HedgeFlowContent() {
               Your {quantityKg} kg of {CROP_LABELS[calc!.crop_type]} is now listed at {formatPrice(calc!.recommended_price)} per kg.
             </p>
             <div className="mt-4 flex gap-3 justify-center flex-wrap">
-              <Link href="/explore" className="cursor-pointer">
-                <Button variant="primary">View on Explore</Button>
+              <Link href="/markets" className="cursor-pointer">
+                <Button variant="primary">View on Markets</Button>
               </Link>
               <Button variant="outline" onClick={() => { setStep(1); setPosted(false); setCalc(null); }}>
                 Hedge Another Crop

@@ -420,7 +420,7 @@ export default function MarketPulsePage() {
           </div>
         </div>
         <div className="mt-5 flex flex-wrap gap-3">
-          <Link href="/explore" className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark">
+          <Link href="/markets" className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark">
             Open the order book
           </Link>
           <Link href="/plant-advisor" className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted-bg">

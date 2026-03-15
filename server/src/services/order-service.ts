@@ -1,4 +1,4 @@
-import db from "../db/connection";
+import db, { type Tx } from "../db/connection";
 import { v4 as uuid } from "uuid";
 import {
   Order,
@@ -33,6 +33,8 @@ function rowToOrder(row: Record<string, unknown>): Order {
     funds_released_at: (row.funds_released_at as string) ?? undefined,
     refunded_at: (row.refunded_at as string) ?? undefined,
     total_amount_usdc: (row.total_amount_usdc as number) ?? undefined,
+    relist_source_order_id:
+      (row.relist_source_order_id as string | null) ?? undefined,
     created_at: row.created_at as string,
   };
 }
@@ -43,6 +45,141 @@ function getBuyerId(order: Order): string {
 
 function getSellerId(order: Order): string {
   return order.type === OrderType.ASK ? order.creator_id : order.filled_by!;
+}
+
+type ContractSide = "BUYER" | "SELLER";
+
+function getCurrentHolderId(order: Order, side: ContractSide): string {
+  return side === "BUYER" ? getBuyerId(order) : getSellerId(order);
+}
+
+function getTransferSideForRelistOrder(orderType: OrderType): ContractSide {
+  return orderType === OrderType.ASK ? "BUYER" : "SELLER";
+}
+
+async function transferContractSideHolder(
+  sourceOrder: Order,
+  side: ContractSide,
+  nextHolderUserId: string,
+): Promise<void> {
+  await transferContractSideHolderWithExecutor(
+    {
+      run: (sql: string, params: unknown[] = []) => db.run(sql, params),
+    },
+    sourceOrder,
+    side,
+    nextHolderUserId,
+  );
+}
+
+async function transferContractSideHolderWithExecutor(
+  executor: Pick<Tx, "run">,
+  sourceOrder: Order,
+  side: ContractSide,
+  nextHolderUserId: string,
+): Promise<void> {
+  if (side === "BUYER") {
+    if (sourceOrder.type === OrderType.ASK) {
+      await executor.run("UPDATE orders SET filled_by = $1 WHERE id = $2", [
+        nextHolderUserId,
+        sourceOrder.id,
+      ]);
+      return;
+    }
+    await executor.run("UPDATE orders SET creator_id = $1 WHERE id = $2", [
+      nextHolderUserId,
+      sourceOrder.id,
+    ]);
+    return;
+  }
+
+  if (sourceOrder.type === OrderType.ASK) {
+    await executor.run("UPDATE orders SET creator_id = $1 WHERE id = $2", [
+      nextHolderUserId,
+      sourceOrder.id,
+    ]);
+    return;
+  }
+  await executor.run("UPDATE orders SET filled_by = $1 WHERE id = $2", [
+    nextHolderUserId,
+    sourceOrder.id,
+  ]);
+}
+
+async function getLockedOrderById(
+  tx: Tx,
+  id: string,
+): Promise<Order | undefined> {
+  const row = await tx.get("SELECT * FROM orders WHERE id = $1 FOR UPDATE", [id]);
+  return row ? rowToOrder(row as Record<string, unknown>) : undefined;
+}
+
+async function createVoucherForPrimaryAskFill(
+  order: Order,
+  ownerId: string,
+): Promise<FutureVoucher | undefined> {
+  if (order.type !== OrderType.ASK || order.relist_source_order_id) return undefined;
+
+  const existing = await db.get(
+    "SELECT * FROM vouchers WHERE original_order_id = $1 LIMIT 1",
+    [order.id],
+  );
+  if (existing) {
+    return rowToVoucher(existing as Record<string, unknown>);
+  }
+
+  const voucherId = uuid();
+  await db.run(
+    "INSERT INTO vouchers (id, original_order_id, owner_id, crop_type, quantity, delivery_date, purchase_price, is_listed) VALUES ($1, $2, $3, $4, $5, $6, $7, 0)",
+    [
+      voucherId,
+      order.id,
+      ownerId,
+      order.crop_type,
+      order.quantity,
+      order.delivery_date,
+      order.price,
+    ],
+  );
+  return getVoucherById(voucherId);
+}
+
+async function validateRelistSourceOrder(args: {
+  sourceOrderId: string;
+  creatorId: string;
+  relistType: OrderType;
+  cropType: string;
+  deliveryDate: string;
+  quantity: number;
+}): Promise<{ sourceOrder?: Order; error?: string }> {
+  const source = await getOrderById(args.sourceOrderId);
+  if (!source) return { error: "Relist source contract not found" };
+  if (source.status !== OrderStatus.FILLED)
+    return { error: "Relist source must be a filled contract" };
+  if (source.funds_released_at || source.refunded_at)
+    return { error: "Relist source contract is already settled" };
+  if (
+    source.crop_type !== args.cropType ||
+    source.delivery_date !== args.deliveryDate ||
+    source.quantity !== args.quantity
+  ) {
+    return {
+      error:
+        "Relist order must match source contract crop, date, and quantity exactly",
+    };
+  }
+  const transferSide = getTransferSideForRelistOrder(args.relistType);
+  const currentHolderId = getCurrentHolderId(source, transferSide);
+  if (currentHolderId !== args.creatorId) {
+    return { error: "You do not currently hold that contract side to relist" };
+  }
+  if (transferSide === "BUYER" && !source.escrow_funded_at) {
+    return {
+      error:
+        "Buyer-side relists are only allowed after the source contract escrow is funded",
+    };
+  }
+  return { sourceOrder: source };
 }
 
 async function releaseFundsToSeller(
@@ -167,10 +304,20 @@ export async function createOrder(
     price: number;
     quantity: number;
     delivery_date: string;
+    relist_source_order_id?: string;
   },
 ): Promise<{ order?: Order; error?: string }> {
   const user = await getUserById(creatorId);
   if (!user) return { error: "User not found" };
+
+  const relistType = data.type as OrderType;
+  if (
+    data.relist_source_order_id &&
+    relistType !== OrderType.ASK &&
+    relistType !== OrderType.BID
+  ) {
+    return { error: "Invalid relist order type" };
+  }
 
   if (data.type === OrderType.BID) {
     return {
@@ -180,15 +327,56 @@ export async function createOrder(
   }
 
   if (data.type === OrderType.ASK) {
-    if (user.role !== UserRole.FARMER)
-      return { error: "Only farmers can create sell orders" };
-    if (!user.is_verified)
-      return { error: "Farmer must be verified to create sell orders" };
+    let relistValidated = false;
+    if (data.relist_source_order_id) {
+      const validation = await validateRelistSourceOrder({
+        sourceOrderId: data.relist_source_order_id,
+        creatorId,
+        relistType: OrderType.ASK,
+        cropType: data.crop_type,
+        deliveryDate: data.delivery_date,
+        quantity: data.quantity,
+      });
+      if (validation.error) return { error: validation.error };
+      relistValidated = true;
+    }
+
+    if (!relistValidated) {
+      if (user.role !== UserRole.FARMER)
+        return { error: "Only farmers can create sell orders" };
+      if (!user.is_verified)
+        return { error: "Farmer must be verified to create sell orders" };
+    }
+  }
+
+  if (data.type === OrderType.BID && data.relist_source_order_id) {
+    const validation = await validateRelistSourceOrder({
+      sourceOrderId: data.relist_source_order_id,
+      creatorId,
+      relistType: OrderType.BID,
+      cropType: data.crop_type,
+      deliveryDate: data.delivery_date,
+      quantity: data.quantity,
+    });
+    if (validation.error) return { error: validation.error };
+  }
+
+  if (data.relist_source_order_id) {
+    const existingOpenRelist = await db.get(
+      "SELECT id FROM orders WHERE creator_id = $1 AND status = $2 AND relist_source_order_id = $3",
+      [creatorId, OrderStatus.OPEN, data.relist_source_order_id]
+    );
+    if (existingOpenRelist) {
+      return {
+        error:
+          "You already have an open relist for this contract. Cancel it in your profile before relisting again.",
+      };
+    }
   }
 
   const id = uuid();
   await db.run(
-    "INSERT INTO orders (id, creator_id, crop_type, type, price, quantity, delivery_date, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+    "INSERT INTO orders (id, creator_id, crop_type, type, price, quantity, delivery_date, status, relist_source_order_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
     [
       id,
       creatorId,
@@ -198,6 +386,7 @@ export async function createOrder(
       data.quantity,
       data.delivery_date,
       OrderStatus.OPEN,
+      data.relist_source_order_id ?? null,
     ],
   );
   return { order: await getOrderById(id)! };
@@ -214,6 +403,7 @@ export async function prepareBidOrder(
     price: number;
     quantity: number;
     delivery_date: string;
+    relist_source_order_id?: string;
   },
   creatorWallet: string,
 ): Promise<{
@@ -226,6 +416,18 @@ export async function prepareBidOrder(
 }> {
   const user = await getUserById(creatorId);
   if (!user) return { error: "User not found" };
+
+  if (data.relist_source_order_id) {
+    const validation = await validateRelistSourceOrder({
+      sourceOrderId: data.relist_source_order_id,
+      creatorId,
+      relistType: OrderType.BID,
+      cropType: data.crop_type,
+      deliveryDate: data.delivery_date,
+      quantity: data.quantity,
+    });
+    if (validation.error) return { error: validation.error };
+  }
 
   const amountUsdc = Math.round(
     (data.price / JMD_PER_USD) * data.quantity * 1e6,
@@ -264,6 +466,7 @@ export async function confirmBidOrder(
     price: number;
     quantity: number;
     delivery_date: string;
+    relist_source_order_id?: string;
   },
 ): Promise<{ order?: Order; error?: string }> {
   const user = await getUserById(creatorId);
@@ -292,8 +495,8 @@ export async function confirmBidOrder(
 
   const now = new Date().toISOString();
   await db.run(
-    `INSERT INTO orders (id, creator_id, crop_type, type, price, quantity, delivery_date, status, total_amount_usdc, escrow_funded_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    `INSERT INTO orders (id, creator_id, crop_type, type, price, quantity, delivery_date, status, total_amount_usdc, escrow_funded_at, relist_source_order_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
     [
       data.orderId,
       creatorId,
@@ -305,6 +508,7 @@ export async function confirmBidOrder(
       OrderStatus.OPEN,
       amountUsdc,
       now,
+      data.relist_source_order_id ?? null,
     ],
   );
   return { order: (await getOrderById(data.orderId))! };
@@ -402,6 +606,142 @@ export async function releaseFillReservation(
   return { released: true };
 }
 
+async function finalizeRelistedOrderFill(args: {
+  relistOrderId: string;
+  filledByUserId: string;
+  filledAt: string;
+  amountUsdc: number;
+  escrowFundedAt: string;
+  reservationDeadline?: string;
+}): Promise<{ order?: Order; error?: string }> {
+  const { relistOrderId, filledByUserId, filledAt, amountUsdc, escrowFundedAt, reservationDeadline } =
+    args;
+  const relistOrder = await getOrderById(relistOrderId);
+  if (!relistOrder) return { error: "Order not found" };
+  if (!relistOrder.relist_source_order_id) {
+    return { error: "Order is not a relist transfer" };
+  }
+  if (amountUsdc <= 0) return { error: "Invalid relist order amount" };
+
+  const sourceOrder = await getOrderById(relistOrder.relist_source_order_id);
+  if (!sourceOrder) return { error: "Relist source contract not found" };
+  if (sourceOrder.status !== OrderStatus.FILLED) {
+    return { error: "Relist source must remain filled" };
+  }
+  if (sourceOrder.funds_released_at || sourceOrder.refunded_at) {
+    return { error: "Relist source contract already settled" };
+  }
+
+  const transferSide = getTransferSideForRelistOrder(relistOrder.type);
+  const currentHolderId = getCurrentHolderId(sourceOrder, transferSide);
+  if (
+    currentHolderId !== relistOrder.creator_id &&
+    currentHolderId !== filledByUserId
+  ) {
+    return { error: "Relist creator no longer controls that contract side" };
+  }
+
+  try {
+    if (!relistOrder.funds_released_at) {
+      // Realize P/L now: relist order escrow pays current position holder side.
+      await releaseFundsToSeller(relistOrder.id, amountUsdc);
+    }
+
+    await db.runInTransaction(async (tx) => {
+      const lockedRelistOrder = await getLockedOrderById(tx, relistOrderId);
+      const lockedSourceOrder = await getLockedOrderById(
+        tx,
+        relistOrder.relist_source_order_id!,
+      );
+      if (!lockedRelistOrder || !lockedSourceOrder) {
+        throw new Error("Relist source contract not found");
+      }
+
+      const lockedHolderId = getCurrentHolderId(lockedSourceOrder, transferSide);
+      if (lockedHolderId === lockedRelistOrder.creator_id) {
+        await transferContractSideHolderWithExecutor(
+          tx,
+          lockedSourceOrder,
+          transferSide,
+          filledByUserId,
+        );
+      } else if (lockedHolderId !== filledByUserId) {
+        throw new Error("Relist creator no longer controls that contract side");
+      }
+
+      const fillResult = reservationDeadline
+        ? await tx.run(
+            `UPDATE orders
+             SET status = $1,
+                 filled_by = $2,
+                 filled_at = $3,
+                 total_amount_usdc = $4,
+                 escrow_funded_at = COALESCE(escrow_funded_at, $5),
+                 pending_fill_by = NULL,
+                 pending_fill_expires_at = NULL
+             WHERE id = $6
+               AND status = 'OPEN'
+               AND pending_fill_by = $7
+               AND pending_fill_expires_at >= $8`,
+            [
+              OrderStatus.FILLED,
+              filledByUserId,
+              filledAt,
+              amountUsdc,
+              escrowFundedAt,
+              relistOrderId,
+              filledByUserId,
+              reservationDeadline,
+            ],
+          )
+        : await tx.run(
+            `UPDATE orders
+             SET status = $1,
+                 filled_by = $2,
+                 filled_at = $3,
+                 total_amount_usdc = $4,
+                 pending_fill_by = NULL,
+                 pending_fill_expires_at = NULL
+             WHERE id = $5
+               AND status = 'OPEN'
+               AND type = $6
+               AND escrow_funded_at IS NOT NULL`,
+            [
+              OrderStatus.FILLED,
+              filledByUserId,
+              filledAt,
+              amountUsdc,
+              relistOrderId,
+              OrderType.BID,
+            ],
+          );
+
+      if (fillResult.changes === 0) {
+        const latestRelistOrder = await getLockedOrderById(tx, relistOrderId);
+        if (
+          latestRelistOrder?.status === OrderStatus.FILLED &&
+          latestRelistOrder.filled_by === filledByUserId
+        ) {
+          return;
+        }
+        throw new Error(
+          reservationDeadline
+            ? "Order was already filled by someone else or your reservation expired. If you sent payment, contact support for a refund."
+            : "Bid order was already filled or is no longer funded.",
+        );
+      }
+    });
+
+    return { order: (await getOrderById(relistOrderId))! };
+  } catch (e) {
+    console.error("finalizeRelistedOrderFill failed", relistOrderId, e);
+    return {
+      error:
+        "Relist transfer settlement failed. Please contact support for manual review.",
+    };
+  }
+}
+
 export async function confirmFillWithPayment(
   userId: string,
   orderId: string,
@@ -452,6 +792,17 @@ export async function confirmFillWithPayment(
     };
   }
 
+  if (order.relist_source_order_id) {
+    return finalizeRelistedOrderFill({
+      relistOrderId: orderId,
+      filledByUserId: userId,
+      filledAt: now,
+      amountUsdc,
+      escrowFundedAt: now,
+      reservationDeadline: now,
+    });
+  }
+
   const fillResult = await db.run(
     `UPDATE orders SET status = $1, filled_by = $2, filled_at = $3, total_amount_usdc = $4, escrow_funded_at = $5, pending_fill_by = NULL, pending_fill_expires_at = NULL
      WHERE id = $6 AND status = 'OPEN' AND pending_fill_by = $7 AND pending_fill_expires_at >= $8`,
@@ -463,28 +814,11 @@ export async function confirmFillWithPayment(
         "Order was already filled by someone else or your reservation expired. If you sent payment, contact support for a refund.",
     };
   }
-
-  let voucher: FutureVoucher | undefined;
-  if (order.type === OrderType.ASK) {
-    const voucherId = uuid();
-    await db.run(
-      "INSERT INTO vouchers (id, original_order_id, owner_id, crop_type, quantity, delivery_date, purchase_price, is_listed) VALUES ($1, $2, $3, $4, $5, $6, $7, 0)",
-      [
-        voucherId,
-        orderId,
-        userId,
-        order.crop_type,
-        order.quantity,
-        order.delivery_date,
-        order.price,
-      ],
-    );
-    voucher = await getVoucherById(voucherId);
-  }
+  const voucher = await createVoucherForPrimaryAskFill(order, userId);
   return { order: (await getOrderById(orderId))!, voucher };
 }
 
-export async function fillOrder(
+export async function acceptBidOrder(
   userId: string,
   orderId: string,
 ): Promise<{ order?: Order; voucher?: FutureVoucher; error?: string }> {
@@ -496,43 +830,52 @@ export async function fillOrder(
 
   const user = await getUserById(userId);
   if (!user) return { error: "User not found" };
+  if (order.type !== OrderType.BID) {
+    return { error: "Direct fills are only allowed for funded bid orders" };
+  }
+  if (!order.escrow_funded_at) {
+    return { error: "Bid order is not funded" };
+  }
 
   const now = new Date().toISOString();
   const totalAmountUsdc = Math.round(
     (order.price / JMD_PER_USD) * order.quantity * 1e6,
   );
+  if (order.relist_source_order_id) {
+    return finalizeRelistedOrderFill({
+      relistOrderId: orderId,
+      filledByUserId: userId,
+      filledAt: now,
+      amountUsdc: totalAmountUsdc,
+      escrowFundedAt: order.escrow_funded_at,
+    });
+  }
+
   const result = await db.run(
-    "UPDATE orders SET status = $1, filled_by = $2, filled_at = $3, total_amount_usdc = $4, pending_fill_by = NULL, pending_fill_expires_at = NULL WHERE id = $5 AND status = $6",
+    `UPDATE orders
+     SET status = $1,
+         filled_by = $2,
+         filled_at = $3,
+         total_amount_usdc = $4,
+         pending_fill_by = NULL,
+         pending_fill_expires_at = NULL
+     WHERE id = $5
+       AND status = 'OPEN'
+       AND type = $6
+       AND escrow_funded_at IS NOT NULL`,
     [
       OrderStatus.FILLED,
       userId,
       now,
       totalAmountUsdc,
       orderId,
-      OrderStatus.OPEN,
+      OrderType.BID,
     ],
   );
-  if (result.changes === 0)
-    return { error: "Order was already filled by someone else." };
-
-  let voucher: FutureVoucher | undefined;
-  if (order.type === OrderType.ASK) {
-    const voucherId = uuid();
-    await db.run(
-      "INSERT INTO vouchers (id, original_order_id, owner_id, crop_type, quantity, delivery_date, purchase_price, is_listed) VALUES ($1, $2, $3, $4, $5, $6, $7, 0)",
-      [
-        voucherId,
-        orderId,
-        userId,
-        order.crop_type,
-        order.quantity,
-        order.delivery_date,
-        order.price,
-      ],
-    );
-    voucher = await getVoucherById(voucherId);
+  if (result.changes === 0) {
+    return { error: "Bid order was already filled or is no longer funded." };
   }
-  return { order: (await getOrderById(orderId))!, voucher };
+  return { order: (await getOrderById(orderId))! };
 }
 
 export async function cancelOrder(
@@ -708,7 +1051,7 @@ export async function confirmReceipt(
 export async function contestDelivery(
   userId: string,
   orderId: string,
-): Promise<{ order?: Order; error?: string }> {
+): Promise<{ order?: Order; message?: string; error?: string }> {
   const order = await getOrderById(orderId);
   if (!order) return { error: "Order not found" };
   if (order.status !== OrderStatus.FILLED)
@@ -718,13 +1061,21 @@ export async function contestDelivery(
   if (!order.delivered_at)
     return { error: "Cannot contest before seller attests delivery" };
   if (order.funds_released_at) return { error: "Funds already released" };
-  if (order.contested_at) return { error: "Already contested" };
+  if (order.contested_at) {
+    return {
+      order,
+      message: "Dispute has been filed and settlement is paused for manual review.",
+    };
+  }
   const now = new Date().toISOString();
   await db.run("UPDATE orders SET contested_at = $1 WHERE id = $2", [
     now,
     orderId,
   ]);
-  return { order: (await getOrderById(orderId))! };
+  return {
+    order: (await getOrderById(orderId))!,
+    message: "Dispute has been filed and settlement is paused for manual review.",
+  };
 }
 
 export async function resolveDispute(

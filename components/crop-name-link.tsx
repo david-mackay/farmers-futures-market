@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
-import { getCropHrefByName } from '@/shared/crop-encyclopedia';
+import { getCropMarketHrefByName } from '@/shared/crop-encyclopedia';
 
 interface CropNameLinkProps {
   cropName: string;
@@ -9,7 +9,7 @@ interface CropNameLinkProps {
 }
 
 export function CropNameLink({ cropName, className = '', children }: CropNameLinkProps) {
-  const href = getCropHrefByName(cropName);
+  const href = getCropMarketHrefByName(cropName);
   const content = children ?? cropName;
 
   if (!href) {

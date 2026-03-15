@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { TransactButton } from '@/components/transact-button';
 import { FillConfirmModal } from '@/components/order-book/fill-confirm-modal';
 import { useUser } from '@/hooks/use-user';
-import { useDevMode } from '@/hooks/use-dev-mode';
 import { useFillWithPayment } from '@/hooks/use-fill-with-payment';
 import { formatPrice, formatKg, formatDeliveryDate, cropLabel } from '@/lib/format';
 import { useCurrency } from '@/contexts/currency-context';
@@ -21,19 +20,22 @@ interface OrderTableProps {
 export function OrderTable({ orders, onOrderUpdate }: OrderTableProps) {
   useCurrency(); // re-render when JMD/USD toggled
   const { user } = useUser();
-  const devMode = useDevMode();
   const { executeFill, loading: fillPaymentLoading, error: fillPaymentError, clearError: clearFillError, canFill } = useFillWithPayment();
   const [confirmOrder, setConfirmOrder] = useState<Order | null>(null);
   const [fillLoading, setFillLoading] = useState(false);
+  const [fillError, setFillError] = useState<string | null>(null);
 
   const handleFillConfirm = async () => {
     if (!confirmOrder) return;
-    if (devMode || confirmOrder.type === 'BID') {
+    setFillError(null);
+    if (confirmOrder.type === 'BID') {
       setFillLoading(true);
       try {
-        await api.post(`/api/orders/${confirmOrder.id}/fill`);
+        await api.post(`/api/orders/${confirmOrder.id}/accept-bid`);
         setConfirmOrder(null);
         onOrderUpdate?.();
+      } catch (err) {
+        setFillError(err instanceof Error ? err.message : 'Failed to accept bid.');
       } finally {
         setFillLoading(false);
       }
@@ -85,24 +87,13 @@ export function OrderTable({ orders, onOrderUpdate }: OrderTableProps) {
               </td>
               <td className="py-3">
                 {order.status === OrderStatus.OPEN && user && order.creator_id !== user.id && (
-                  devMode ? (
-                    <TransactButton
-                      orderId={order.id}
-                      action={order.type === 'BID' ? 'Sell to Bidder' : 'Buy Future'}
-                      endpoint={`/api/orders/${order.id}/fill`}
-                      onSuccess={onOrderUpdate}
-                      variant={order.type === 'BID' ? 'secondary' : 'primary'}
-                      size="sm"
-                    />
-                  ) : (
-                    <Button
-                      variant={order.type === 'BID' ? 'secondary' : 'primary'}
-                      size="sm"
-                      onClick={() => setConfirmOrder(order)}
-                    >
-                      {order.type === 'BID' ? 'Sell to Bidder' : 'Buy Future'}
-                    </Button>
-                  )
+                  <Button
+                    variant={order.type === 'BID' ? 'secondary' : 'primary'}
+                    size="sm"
+                    onClick={() => setConfirmOrder(order)}
+                  >
+                    {order.type === 'BID' ? 'Sell to Bidder' : 'Buy Future'}
+                  </Button>
                 )}
                 {order.status === OrderStatus.OPEN && user && order.creator_id === user.id && (
                   <TransactButton
@@ -123,13 +114,13 @@ export function OrderTable({ orders, onOrderUpdate }: OrderTableProps) {
       {confirmOrder && (
         <FillConfirmModal
           open={!!confirmOrder}
-          onClose={() => { clearFillError(); setConfirmOrder(null); }}
+          onClose={() => { clearFillError(); setFillError(null); setConfirmOrder(null); }}
           order={confirmOrder}
           actionLabel={confirmOrder.type === 'BID' ? 'Sell to Bidder' : 'Buy Future'}
           onConfirm={handleFillConfirm}
-          loading={confirmOrder.type === 'BID' || devMode ? fillLoading : fillPaymentLoading}
-          error={fillPaymentError}
-          confirmDisabled={confirmOrder.type === 'ASK' && !devMode && !canFill}
+          loading={confirmOrder.type === 'BID' ? fillLoading : fillPaymentLoading}
+          error={confirmOrder.type === 'BID' ? fillError : fillPaymentError}
+          confirmDisabled={confirmOrder.type === 'ASK' && !canFill}
           confirmDisabledReason={!canFill ? 'Connect wallet first' : undefined}
         />
       )}

@@ -79,6 +79,12 @@ export function getCropHrefByName(name: string) {
   return crop ? getCropHref(crop) : null;
 }
 
+/** Link to the market (order book) for this crop. */
+export function getCropMarketHrefByName(name: string) {
+  const crop = findCropByName(name);
+  return crop ? `/markets?crop=${getCropTypeForApi(crop.common_name)}` : null;
+}
+
 export function formatCropLabel(value: string) {
   return value
     .split(/[_\s]+/)
