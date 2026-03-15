@@ -11,6 +11,7 @@ import { useOrders } from '@/hooks/use-orders';
 import { CropSearchModal } from '@/components/crop-search-modal';
 import { CropNameLink } from '@/components/crop-name-link';
 import { formatPrice, formatDeliveryDate, formatKg, formatRevenue } from '@/lib/format';
+import { useCurrency } from '@/contexts/currency-context';
 import { computeCropPreviews } from '@/lib/crop-previews';
 import { isSeller, isBuyer } from '@/lib/order-role';
 import { api } from '@/lib/api-client';
@@ -22,6 +23,7 @@ import type { OptimizedPlan } from '@/shared/types';
 const today = () => new Date().toISOString().slice(0, 10);
 
 export default function DashboardPage() {
+  useCurrency(); // re-render when JMD/USD toggled
   const { user } = useUser();
   const { watched } = useWatchedCrops();
   const [searchOpen, setSearchOpen] = useState(false);

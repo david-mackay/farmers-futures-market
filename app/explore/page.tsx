@@ -132,7 +132,6 @@ export default function ExplorePage() {
               aria-haspopup="listbox"
               aria-controls="crop-search-listbox"
               id="crop-search-input"
-              autoFocus
             />
             {showSearchDropdown && (
               <ul

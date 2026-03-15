@@ -8,9 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CropNameLink } from '@/components/crop-name-link';
 import { formatPrice, formatRevenue } from '@/lib/format';
+import { useCurrency } from '@/contexts/currency-context';
 import Link from 'next/link';
 
 export default function PlantAdvisorPage() {
+  useCurrency(); // re-render when JMD/USD toggled
   const [recommendations, setRecommendations] = useState<PlantRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
 

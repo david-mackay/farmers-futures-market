@@ -27,7 +27,6 @@ export function CropSearchModal({ open, onClose }: CropSearchModalProps) {
           placeholder="e.g. Wheat, Corn..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          autoFocus
         />
         <div className="max-h-[60vh] overflow-y-auto border border-border rounded-lg divide-y divide-border -mx-1">
           {results.length === 0 ? (

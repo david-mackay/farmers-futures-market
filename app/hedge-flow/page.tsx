@@ -11,11 +11,13 @@ import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { formatPrice, formatRevenue, formatQuantity } from '@/lib/format';
+import { useCurrency } from '@/contexts/currency-context';
 import Link from 'next/link';
 
 const cropOptions = Object.entries(CROP_LABELS).map(([value, label]) => ({ value, label }));
 
 function HedgeFlowContent() {
+  useCurrency(); // re-render when JMD/USD toggled
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useUser();

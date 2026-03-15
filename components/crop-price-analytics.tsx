@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api-client';
 import { formatDeliveryMonth, formatKg, formatPricePerKg } from '@/lib/format';
+import { useCurrency } from '@/contexts/currency-context';
 import { cropLabel } from '@/lib/format';
 import { CropType } from '@/shared/types';
 
@@ -59,6 +60,7 @@ function formatChange(value: number) {
 }
 
 export function CropPriceAnalytics({ cropType }: CropPriceAnalyticsProps) {
+  useCurrency(); // re-render when JMD/USD toggled
   const [data, setData] = useState<CropPriceAnalyticsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 

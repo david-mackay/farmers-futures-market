@@ -9,6 +9,7 @@ import { CROP_LABELS } from '@/shared/constants';
 import { CropType } from '@/shared/types';
 import { CropNameLink } from '@/components/crop-name-link';
 import { formatDeliveryMonth, formatKg, formatPrice } from '@/lib/format';
+import { useCurrency } from '@/contexts/currency-context';
 
 interface MarketActivityOverview {
   open_orders: number;
@@ -108,6 +109,7 @@ function compareWidth(current: number, previous: number) {
 }
 
 export default function MarketPulsePage() {
+  useCurrency(); // re-render when JMD/USD toggled
   const [data, setData] = useState<MarketActivitySummary | null>(null);
   const [startMonth, setStartMonth] = useState('');
   const [endMonth, setEndMonth] = useState('');

@@ -10,8 +10,10 @@ import { Select } from '@/components/ui/select';
 import { DeliveryDateModal } from '@/components/delivery-date-modal';
 import { useUser } from '@/hooks/use-user';
 import { useCreateBidWithDeposit } from '@/hooks/use-create-bid-with-deposit';
+import { useCurrency } from '@/contexts/currency-context';
 import { api } from '@/lib/api-client';
-import { formatPrice, formatDeliveryDate, getNextContractDays, getPricePerKgLabel } from '@/lib/format';
+import { formatPrice, formatDeliveryDate, getNextContractDays, getPricePerKgLabel, orderTotalUsd } from '@/lib/format';
+import { JMD_PER_USD } from '@/shared/constants';
 
 interface OrderFormProps {
   onSuccess?: () => void;
@@ -25,6 +27,7 @@ interface OrderFormProps {
 const cropOptions = Object.entries(CROP_LABELS).map(([value, label]) => ({ value, label }));
 
 export function OrderForm({ onSuccess, defaultCrop, defaultType, defaultQuantityKg, defaultPricePerKg, defaultDeliveryDate }: OrderFormProps) {
+  useCurrency(); // re-render when JMD/USD toggled
   const { user } = useUser();
   const { createBidOrder, loading: bidLoading, error: bidError, clearError: clearBidError, canCreateBid } = useCreateBidWithDeposit();
   const [cropType, setCropType] = useState(defaultCrop || '');
@@ -151,6 +154,27 @@ export function OrderForm({ onSuccess, defaultCrop, defaultType, defaultQuantity
           </p>
         )}
       </div>
+
+      {orderType === OrderType.BID && totalValue > 0 && (
+        <div className="rounded-xl border border-border bg-primary/5 dark:bg-primary/10 p-4">
+          <p className="text-sm font-medium text-foreground">
+            Deposit before confirming
+          </p>
+          <p className="text-xs text-muted mt-1">
+            Your wallet will send{' '}
+            <span className="font-data font-semibold text-primary">
+              ${orderTotalUsd(price, kg, JMD_PER_USD).toFixed(2)} USDC
+            </span>
+            {' '}to escrow. The Reown modal will not show this amount — this is the total that will be deducted.
+          </p>
+        </div>
+      )}
+
+      {orderType === OrderType.ASK && totalValue > 0 && (
+        <p className="text-xs text-muted">
+          Sell orders do not require a deposit. You will receive USDC when the buyer pays after filling your order.
+        </p>
+      )}
 
       <div>
         <label className="block text-sm font-medium text-foreground mb-1">Delivery date</label>

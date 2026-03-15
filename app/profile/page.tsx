@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useUser } from '@/hooks/use-user';
 import { useWatchedCrops } from '@/hooks/use-watched-crops';
-import { Order } from '@/shared/types';
+import { Order, OrderStatus } from '@/shared/types';
 import { CROP_LABELS } from '@/shared/constants';
 import { api } from '@/lib/api-client';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { formatPrice, formatDeliveryDate, formatKg } from '@/lib/format';
+import { useCurrency } from '@/contexts/currency-context';
 import { CropType } from '@/shared/types';
 import { Pencil, X } from 'lucide-react';
 import { AppKitButton } from '@reown/appkit/react';
@@ -28,6 +29,7 @@ function parseCropsProduced(raw: string | null | undefined): CropType[] {
 const CROP_OPTIONS = Object.entries(CROP_LABELS).map(([value, label]) => ({ value, label }));
 
 export default function ProfilePage() {
+  useCurrency(); // re-render when JMD/USD toggled
   const { user, refreshUser } = useUser();
   const { add: addToWatchlist } = useWatchedCrops();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -44,11 +46,28 @@ export default function ProfilePage() {
     mint: string;
   } | null>(null);
   const [tokenBalanceLoading, setTokenBalanceLoading] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+  const fetchOrders = useCallback(() => {
+    if (!user) return;
+    api.get<Order[]>(`/api/users/${user.id}/orders`).then(setOrders);
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
+    setLoading(true);
     api.get<Order[]>(`/api/users/${user.id}/orders`).then(setOrders).finally(() => setLoading(false));
   }, [user]);
+
+  const handleCancelOrder = useCallback(async (orderId: string) => {
+    setCancellingId(orderId);
+    try {
+      await api.delete(`/api/orders/${orderId}`);
+      await fetchOrders();
+    } finally {
+      setCancellingId(null);
+    }
+  }, [fetchOrders]);
 
   useEffect(() => {
     if (!user) return;
@@ -376,6 +395,7 @@ export default function ProfilePage() {
                   <th className="py-2 px-4 text-xs font-bold uppercase text-muted">Kg</th>
                   <th className="py-2 px-4 text-xs font-bold uppercase text-muted">Delivery</th>
                   <th className="py-2 px-4 text-xs font-bold uppercase text-muted">Status</th>
+                  <th className="py-2 px-4 text-xs font-bold uppercase text-muted">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -390,6 +410,21 @@ export default function ProfilePage() {
                     <td className="py-3 px-4">{formatDeliveryDate(o.delivery_date)}</td>
                     <td className="py-3 px-4">
                       <Badge variant={o.status.toLowerCase() as 'open' | 'filled' | 'cancelled'}>{o.status}</Badge>
+                    </td>
+                    <td className="py-3 px-4">
+                      {o.status === OrderStatus.OPEN && o.creator_id === user?.id ? (
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          disabled={cancellingId === o.id}
+                          onClick={() => handleCancelOrder(o.id)}
+                          className="min-h-[2rem]"
+                        >
+                          {cancellingId === o.id ? 'Cancelling…' : 'Cancel'}
+                        </Button>
+                      ) : (
+                        '—'
+                      )}
                     </td>
                   </tr>
                 ))}

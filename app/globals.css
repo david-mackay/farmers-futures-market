@@ -96,3 +96,8 @@ body {
   font-family: var(--font-geist-mono), 'Courier New', monospace;
   font-variant-numeric: tabular-nums;
 }
+
+/* Logo wordmark (FFM) — Bebas Neue */
+.logo-font {
+  font-family: var(--font-logo), Impact, sans-serif;
+}

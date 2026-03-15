@@ -13,7 +13,7 @@ const defaultSolanaNetwork =
   process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'mainnet' ? solana : solanaDevnet;
 
 const metadata = {
-  name: "Future's Farmer's Market",
+  name: "FFM",
   description: "A Farmers' Futures Trading Post",
   url: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
   icons: ['/favicon.ico'],

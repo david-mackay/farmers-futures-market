@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api-client';
 import { formatPrice } from '@/lib/format';
+import { useCurrency } from '@/contexts/currency-context';
 
 interface PriceHistoryPoint {
   filled_at: string;
@@ -16,6 +17,7 @@ interface CropPriceChartProps {
 }
 
 export function CropPriceChart({ cropType, cropName, className = '' }: CropPriceChartProps) {
+  useCurrency(); // re-render when JMD/USD toggled
   const [points, setPoints] = useState<PriceHistoryPoint[]>([]);
   const [loading, setLoading] = useState(true);
 

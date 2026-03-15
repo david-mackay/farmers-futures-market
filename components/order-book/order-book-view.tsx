@@ -11,6 +11,7 @@ import { TransactButton } from '@/components/transact-button';
 import { FillConfirmModal } from '@/components/order-book/fill-confirm-modal';
 import { CropNameLink } from '@/components/crop-name-link';
 import { formatPricePerKg, formatDeliveryDate } from '@/lib/format';
+import { useCurrency } from '@/contexts/currency-context';
 import { api } from '@/lib/api-client';
 
 interface LastPriceResult {
@@ -27,6 +28,7 @@ interface OrderBookViewProps {
 
 /** Level II–style order book: best bid/ask at top, then Fill | Size | Bid | Ask | Size | Buy — buttons on ends, prices center */
 export function OrderBookView({ orders, cropType, deliveryDate, onUpdate }: OrderBookViewProps) {
+  useCurrency(); // re-render when JMD/USD toggled
   const { user } = useUser();
   const devMode = useDevMode();
   const { executeFill, loading: fillPaymentLoading, error: fillPaymentError, clearError: clearFillError, canFill } = useFillWithPayment();

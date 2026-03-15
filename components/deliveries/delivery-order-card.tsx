@@ -5,6 +5,7 @@ import { CROP_LABELS } from '@/shared/constants';
 import { useUser } from '@/hooks/use-user';
 import { CropNameLink } from '@/components/crop-name-link';
 import { formatPrice, formatDeliveryDate, formatKg } from '@/lib/format';
+import { useCurrency } from '@/contexts/currency-context';
 import { isSeller, isBuyer } from '@/lib/order-role';
 import { api } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ interface DeliveryOrderCardProps {
 }
 
 export function DeliveryOrderCard({ order, loading, runEscrow }: DeliveryOrderCardProps) {
+  useCurrency(); // re-render when JMD/USD toggled
   const { user } = useUser();
   if (!user) return null;
   const total = order.quantity * order.price;

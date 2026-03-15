@@ -37,7 +37,7 @@ export function NavBar() {
           <Link
             href="/"
             className="flex items-center gap-2 shrink-0 min-w-0 cursor-pointer transition-opacity duration-200 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
-            aria-label="Future's Farmer's Market home"
+            aria-label="FFM — Future's Farmer's Market home"
           >
             <Image
               src="/assets/ffm-logo.png"
@@ -47,7 +47,7 @@ export function NavBar() {
               className="h-12 w-12 sm:h-14 sm:w-14 object-contain"
               priority
             />
-            <span className="text-base sm:text-xl font-bold text-foreground truncate hidden sm:inline">Farmer&apos;s Market</span>
+            <span className="logo-font text-xl sm:text-2xl tracking-wide text-foreground truncate hidden sm:inline">FFM</span>
           </Link>
 
           {/* Desktop nav links */}

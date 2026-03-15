@@ -10,6 +10,7 @@ import { useUser } from '@/hooks/use-user';
 import { useDevMode } from '@/hooks/use-dev-mode';
 import { useFillWithPayment } from '@/hooks/use-fill-with-payment';
 import { formatPrice, formatKg, formatDeliveryDate, cropLabel } from '@/lib/format';
+import { useCurrency } from '@/contexts/currency-context';
 import { api } from '@/lib/api-client';
 
 interface OrderTableProps {
@@ -18,6 +19,7 @@ interface OrderTableProps {
 }
 
 export function OrderTable({ orders, onOrderUpdate }: OrderTableProps) {
+  useCurrency(); // re-render when JMD/USD toggled
   const { user } = useUser();
   const devMode = useDevMode();
   const { executeFill, loading: fillPaymentLoading, error: fillPaymentError, clearError: clearFillError, canFill } = useFillWithPayment();
