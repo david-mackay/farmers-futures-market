@@ -1,6 +1,6 @@
 import db from '../db/connection';
 import { v4 as uuid } from 'uuid';
-import { User, UserRole } from '../../../shared/types';
+import { User, UserRole } from '../shared/types';
 
 function rowToUser(row: any): User {
   const isFarmer = row.is_farmer != null ? !!row.is_farmer : row.role === 'FARMER';

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { CropType } from '../../../shared/types';
+import { CropType } from '../shared/types';
 import * as analyticsService from '../services/analytics-service';
 
 export function createAnalyticsRouter() {

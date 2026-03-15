@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuid } from 'uuid';
-import { CONTRACT_DELIVERY_DAYS } from '../../../shared/constants';
+import { CONTRACT_DELIVERY_DAYS } from '../shared/constants';
 import db from './connection';
 import { CROPS } from './crops';
 
@@ -43,7 +43,7 @@ function toCropType(commonName: string): string {
 }
 
 function seed() {
-  const jsonPath = path.join(__dirname, '../../../jamaican_crops.json');
+  const jsonPath = path.join(__dirname, '../../jamaican_crops.json');
   if (!fs.existsSync(jsonPath)) {
     console.error('jamaican_crops.json not found at', jsonPath);
     process.exit(1);

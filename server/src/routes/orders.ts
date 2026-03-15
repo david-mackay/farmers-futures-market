@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { AuthRequest, requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
-import { createOrderSchema } from '../../../shared/validation';
+import { createOrderSchema } from '../shared/validation';
 import * as orderService from '../services/order-service';
 import { Server as SocketServer } from 'socket.io';
 

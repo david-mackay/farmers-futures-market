@@ -4,10 +4,10 @@
  * Run separately: npm run sim (from repo root). Requires the server to be running.
  */
 
-import { CONTRACT_DELIVERY_DAYS } from "../../../shared/constants";
+import { CONTRACT_DELIVERY_DAYS } from '../shared/constants';
 import db from "../db/connection";
 import * as userService from "../services/user-service";
-import { OrderType } from "../../../shared/types";
+import { OrderType } from '../shared/types';
 
 const CROP = "BANANA";
 const SIM_FARMER_ID = "sim-farmer-banana";

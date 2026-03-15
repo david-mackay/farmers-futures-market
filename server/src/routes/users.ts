@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { AuthRequest, requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
-import { updateUserSchema } from '../../../shared/validation';
+import { updateUserSchema } from '../shared/validation';
 import * as userService from '../services/user-service';
 import * as orderService from '../services/order-service';
 

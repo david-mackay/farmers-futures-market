@@ -1,6 +1,6 @@
 import db from '../db/connection';
 import { v4 as uuid } from 'uuid';
-import { Order, OrderType, OrderStatus, FutureVoucher, UserRole } from '../../../shared/types';
+import { Order, OrderType, OrderStatus, FutureVoucher, UserRole } from '../shared/types';
 import { getUserById } from './user-service';
 
 const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;

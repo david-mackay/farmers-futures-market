@@ -1,6 +1,6 @@
 import db from '../db/connection';
-import { HeatMapCell, PlantRecommendation, HedgeFlowCalculation, CropType, OrderType, OrderStatus } from '../../../shared/types';
-import { CROP_YIELD_PER_ACRE } from '../../../shared/constants';
+import { HeatMapCell, PlantRecommendation, HedgeFlowCalculation, CropType, OrderType, OrderStatus } from '../shared/types';
+import { CROP_YIELD_PER_ACRE } from '../shared/constants';
 
 export function getHeatMap(): HeatMapCell[] {
   const rows = db.prepare(`

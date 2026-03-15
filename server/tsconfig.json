@@ -4,7 +4,7 @@
     "module": "commonjs",
     "lib": ["ES2020"],
     "outDir": "./dist",
-    "rootDir": "..",
+    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -12,12 +12,8 @@
     "resolveJsonModule": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true,
-    "paths": {
-      "@shared/*": ["../shared/*"]
-    },
-    "baseUrl": "."
+    "sourceMap": true
   },
-  "include": ["src/**/*", "../shared/types.ts", "../shared/validation.ts", "../shared/constants.ts"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }
