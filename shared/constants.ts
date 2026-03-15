@@ -3,6 +3,40 @@ import { CropType } from './types';
 /** Weekday numbers (0 = Sunday, 1 = Monday, ... 6 = Saturday) that are valid contract delivery days. */
 export const CONTRACT_DELIVERY_DAYS: number[] = [0, 1];
 
+/** Days from planting to first harvest (harvest_start_days from jamaican_crops.json). */
+export const CROP_DAYS_TO_HARVEST: Record<CropType, number> = {
+  [CropType.ACKEE]: 1095,
+  [CropType.BANANA]: 270,
+  [CropType.PLANTAIN]: 300,
+  [CropType.COFFEE]: 1095,
+  [CropType.PIMENTO]: 1460,
+  [CropType.COCOA]: 1095,
+  [CropType.COCONUT]: 1825,
+  [CropType.BREADFRUIT]: 1460,
+  [CropType.MANGO]: 1095,
+  [CropType.GUAVA]: 730,
+  [CropType.SOURSOP]: 730,
+  [CropType.PAPAYA]: 240,
+  [CropType.PINEAPPLE]: 420,
+  [CropType.WATERMELON]: 75,
+  [CropType.PUMPKIN]: 90,
+  [CropType.TOMATO]: 75,
+  [CropType.CALLALOO]: 25,
+  [CropType.SWEET_POTATO]: 90,
+  [CropType.YAM]: 240,
+  [CropType.CASSAVA]: 240,
+  [CropType.DASHEEN]: 180,
+  [CropType.GINGER]: 210,
+  [CropType.TURMERIC]: 240,
+  [CropType.HOT_PEPPER_SCOTCH_BONNET]: 90,
+  [CropType.OKRA]: 50,
+  [CropType.THYME]: 90,
+  [CropType.SCALLION]: 60,
+  [CropType.SORREL]: 150,
+  [CropType.PEANUT]: 110,
+  [CropType.GUNGO_PEA]: 150,
+};
+
 /** Yield kg per acre (from jamaican_crops.json yield_kg_per_hectare / 2.471). */
 export const CROP_YIELD_PER_ACRE: Record<CropType, number> = {
   [CropType.ACKEE]: 3240,
@@ -173,3 +207,6 @@ export const CROP_WHOLESALE_JMD_PER_KG: Record<CropType, number> = {
 
 /** All orders use price per kg and quantity in kg (JMD). */
 export const PRICE_PER_KG_LABEL = 'J$/kg';
+
+/** Exchange rate for USD display: 1 USD = JMD_PER_USD JMD. */
+export const JMD_PER_USD = 157;

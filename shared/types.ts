@@ -128,3 +128,41 @@ export interface HeatMapCell {
   avg_bid_price: number;
   avg_ask_price: number;
 }
+
+export interface PlantRecommendation {
+  crop_type: CropType;
+  total_demand: number;
+  avg_bid_price: number;
+  projected_revenue_per_acre: number;
+  yield_per_acre: number;
+  demand_supply_ratio: number;
+}
+
+export interface HedgeFlowCalculation {
+  crop_type: CropType;
+  acreage: number;
+  expected_yield: number;
+  recommended_price: number;
+  projected_revenue: number;
+}
+
+/** One row of an optimized farm plan (knapsack-style allocation). */
+export interface OptimizedPlanRow {
+  crop_type: CropType;
+  acres: number;
+  estimated_kg: number;
+  estimated_revenue: number;
+  price_per_kg: number;
+  days_to_harvest: number;
+  /** Latest plant-by date to meet the target delivery (best bid). */
+  plant_by_date: string;
+  delivery_date: string;
+  /** True if plant_by_date is in the past — delivery may be too soon to fulfill. */
+  delivery_too_soon?: boolean;
+}
+
+export interface OptimizedPlan {
+  total_acres_used: number;
+  total_estimated_revenue: number;
+  rows: OptimizedPlanRow[];
+}

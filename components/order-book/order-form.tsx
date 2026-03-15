@@ -11,7 +11,7 @@ import { DeliveryDateModal } from '@/components/delivery-date-modal';
 import { useUser } from '@/hooks/use-user';
 import { useDevMode } from '@/hooks/use-dev-mode';
 import { api } from '@/lib/api-client';
-import { formatPrice, formatDeliveryDate, getNextContractDays } from '@/lib/format';
+import { formatPrice, formatDeliveryDate, getNextContractDays, getPricePerKgLabel } from '@/lib/format';
 
 interface OrderFormProps {
   onSuccess?: () => void;
@@ -111,7 +111,7 @@ export function OrderForm({ onSuccess, defaultCrop, defaultType, defaultQuantity
       />
 
       <Input
-        label="Price per kg (J$/kg)"
+        label={`Price per kg (${getPricePerKgLabel()})`}
         type="number"
         step="0.01"
         min="0.01"

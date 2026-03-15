@@ -7,6 +7,7 @@ import { createAuthRouter } from './routes/auth';
 import { createOrdersRouter } from './routes/orders';
 import { createUsersRouter } from './routes/users';
 import { createAnalyticsRouter } from './routes/analytics';
+import { createMarketRouter } from './routes/market';
 import { createVouchersRouter } from './routes/vouchers';
 import { setupSocketHandlers } from './socket/handlers';
 
@@ -32,6 +33,7 @@ app.use('/api/auth', createAuthRouter());
 app.use('/api/orders', createOrdersRouter(io));
 app.use('/api/users', createUsersRouter());
 app.use('/api/analytics', createAnalyticsRouter());
+app.use('/api/market', createMarketRouter());
 app.use('/api/vouchers', createVouchersRouter(io));
 
 // Health check

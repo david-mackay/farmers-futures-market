@@ -8,6 +8,7 @@ import { AppKitButton } from '@reown/appkit/react';
 import { useUser } from '@/hooks/use-user';
 import { useDevMode } from '@/hooks/use-dev-mode';
 import { useTheme } from '@/contexts/theme-context';
+import { useCurrency } from '@/contexts/currency-context';
 import { Badge } from '@/components/ui/badge';
 import { appkitProjectId } from '@/config/appkit-config';
 
@@ -24,6 +25,7 @@ export function NavBar() {
   const { disconnect } = useDisconnect();
   const devMode = useDevMode();
   const { theme, toggleTheme } = useTheme();
+  const { currency, toggleCurrency } = useCurrency();
 
   return (
     <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border safe-area-pt" aria-label="Site header">
@@ -60,8 +62,17 @@ export function NavBar() {
             })}
           </div>
 
-          {/* Theme toggle + user + dev */}
+          {/* Currency + theme toggle + user + dev */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
+            <button
+              type="button"
+              onClick={toggleCurrency}
+              className="px-2 py-1.5 rounded-lg text-sm font-medium text-muted hover:text-foreground hover:bg-muted-bg transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 touch-manipulation border border-border"
+              aria-label={currency === 'JMD' ? 'Show prices in USD' : 'Show prices in JMD'}
+              title={currency === 'JMD' ? 'Switch to USD' : 'Switch to JMD'}
+            >
+              {currency === 'JMD' ? 'JMD' : 'USD'}
+            </button>
             <button
               type="button"
               onClick={toggleTheme}

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Order, OrderStatus } from '@/shared/types';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Order } from '@/shared/types';
 import { api } from '@/lib/api-client';
 import { useSocketEvent } from './use-socket';
 
@@ -15,10 +15,26 @@ interface UseOrdersOptions {
   creator_id?: string;
 }
 
+function orderMatchesOptions(order: Order, opts: UseOrdersOptions): boolean {
+  if (opts.crop_type != null && order.crop_type !== opts.crop_type) return false;
+  if (opts.type != null && order.type !== opts.type) return false;
+  if (opts.status != null && order.status !== opts.status) return false;
+  if (opts.delivery_date != null && order.delivery_date !== opts.delivery_date) return false;
+  if (opts.delivery_month != null) {
+    const month = order.delivery_date.slice(0, 7);
+    if (month !== opts.delivery_month) return false;
+  }
+  if (opts.filled_by != null && order.filled_by !== opts.filled_by) return false;
+  if (opts.creator_id != null && order.creator_id !== opts.creator_id) return false;
+  return true;
+}
+
 export function useOrders(options: UseOrdersOptions = {}) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -35,8 +51,8 @@ export function useOrders(options: UseOrdersOptions = {}) {
       const qs = params.toString();
       const data = await api.get<Order[]>(`/api/orders${qs ? `?${qs}` : ''}`);
       setOrders(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch orders');
     } finally {
       setLoading(false);
     }
@@ -45,15 +61,28 @@ export function useOrders(options: UseOrdersOptions = {}) {
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   useSocketEvent('order:created', (order: Order) => {
+    if (!orderMatchesOptions(order, optionsRef.current)) return;
     setOrders(prev => [order, ...prev]);
   });
 
   useSocketEvent('order:filled', (updated: Order) => {
-    setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+    const showingOpenOnly = optionsRef.current.status === 'OPEN';
+    setOrders(prev => {
+      const idx = prev.findIndex(o => o.id === updated.id);
+      if (idx === -1) return prev;
+      if (showingOpenOnly) return prev.filter(o => o.id !== updated.id);
+      return prev.map(o => o.id === updated.id ? updated : o);
+    });
   });
 
   useSocketEvent('order:cancelled', (updated: Order) => {
-    setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+    const showingOpenOnly = optionsRef.current.status === 'OPEN';
+    setOrders(prev => {
+      const idx = prev.findIndex(o => o.id === updated.id);
+      if (idx === -1) return prev;
+      if (showingOpenOnly) return prev.filter(o => o.id !== updated.id);
+      return prev.map(o => o.id === updated.id ? updated : o);
+    });
   });
 
   return { orders, loading, error, refetch: fetchOrders };

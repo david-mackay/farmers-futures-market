@@ -165,11 +165,46 @@ function seed() {
         orderIndex++;
       }
     }
+
+    // One crop + one day with a lot of orders for a dense order book example
+    const hotCrop = crops[1]; // e.g. banana
+    const hotCropType = toCropType(hotCrop.common_name);
+    const hotDate = deliveryDates[0];
+    const baseBid = Math.round(hotCrop.wholesale_price_jmd_per_kg * 0.85);
+    const baseAsk = hotCrop.wholesale_price_jmd_per_kg;
+    const NUM_EXTRA_BIDS = 12;
+    const NUM_EXTRA_ASKS = 10;
+    for (let i = 0; i < NUM_EXTRA_BIDS; i++) {
+      insertOrder.run(
+        uuid(),
+        SEED_BUYER_ID,
+        hotCropType,
+        'BID',
+        baseBid + i * 5,
+        200 + (i % 5) * 150,
+        hotDate,
+        now
+      );
+    }
+    for (let i = 0; i < NUM_EXTRA_ASKS; i++) {
+      insertOrder.run(
+        uuid(),
+        SEED_FARMER_ID,
+        hotCropType,
+        'ASK',
+        baseAsk + i * 8,
+        180 + (i % 4) * 120,
+        hotDate,
+        now
+      );
+    }
   });
 
+  const extraOrders = 12 + 10;
   run();
   console.log(
-    `Seeded: ${CROPS.length} crops, 2 users, ${crops.length * deliveryDates.length * 2} OPEN orders (ASK + BID) with JMD/kg from jamaican_crops.json.`
+    `Seeded: ${CROPS.length} crops, 2 users, ${crops.length * deliveryDates.length * 2 + extraOrders} OPEN orders (ASK + BID) with JMD/kg from jamaican_crops.json. ` +
+      `Banana (or crop #2) has many orders on ${deliveryDates[0]} for order book demo.`
   );
 }
 

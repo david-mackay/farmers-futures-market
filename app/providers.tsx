@@ -4,6 +4,7 @@ import { ReactNode } from 'react';
 import { UserProvider, useUser } from '@/hooks/use-user';
 import { WatchedCropsProvider } from '@/contexts/watched-crops-context';
 import { ThemeProvider } from '@/contexts/theme-context';
+import { CurrencyProvider } from '@/contexts/currency-context';
 import { NavBar } from '@/components/layout/nav-bar';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { SignInGate } from '@/components/sign-in-gate';
@@ -50,11 +51,13 @@ function AuthAwareLayout({ children }: { children: ReactNode }) {
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider>
-      <UserProvider>
-        <WatchedCropsProvider>
-          <AuthAwareLayout>{children}</AuthAwareLayout>
-        </WatchedCropsProvider>
-      </UserProvider>
+      <CurrencyProvider>
+        <UserProvider>
+          <WatchedCropsProvider>
+            <AuthAwareLayout>{children}</AuthAwareLayout>
+          </WatchedCropsProvider>
+        </UserProvider>
+      </CurrencyProvider>
     </ThemeProvider>
   );
 }

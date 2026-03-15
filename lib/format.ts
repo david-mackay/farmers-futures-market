@@ -1,15 +1,39 @@
 import { CropType } from '@/shared/types';
-import { CROP_LABELS, CROP_UNIT, CONTRACT_DELIVERY_DAYS } from '@/shared/constants';
+import { CROP_LABELS, CROP_UNIT, CONTRACT_DELIVERY_DAYS, JMD_PER_USD } from '@/shared/constants';
 
-const CURRENCY_SYMBOL = 'J$';
+export type DisplayCurrency = 'JMD' | 'USD';
 
-/** Price is always per kg. Use for display and sorting. */
+let _displayCurrency: DisplayCurrency = 'JMD';
+
+export function getDisplayCurrency(): DisplayCurrency {
+  return _displayCurrency;
+}
+
+export function setDisplayCurrency(c: DisplayCurrency): void {
+  _displayCurrency = c;
+}
+
+function getSymbol(): string {
+  return _displayCurrency === 'USD' ? '$' : 'J$';
+}
+
+function toDisplayAmount(jmd: number): number {
+  return _displayCurrency === 'USD' ? jmd / JMD_PER_USD : jmd;
+}
+
+/** Price is always per kg (stored in JMD). Display in selected currency. */
 export function formatPrice(price: number): string {
-  return `${CURRENCY_SYMBOL}${price.toFixed(2)}`;
+  const amount = toDisplayAmount(price);
+  return `${getSymbol()}${amount.toFixed(2)}`;
 }
 
 export function formatPricePerKg(price: number): string {
   return `${formatPrice(price)}/kg`;
+}
+
+/** Label for price per kg in current display currency (e.g. "J$/kg" or "$/kg"). */
+export function getPricePerKgLabel(): string {
+  return `${getSymbol()}/kg`;
 }
 
 export function formatQuantity(quantity: number, cropType?: CropType): string {
@@ -105,7 +129,9 @@ export function cropLabel(cropType: CropType): string {
 }
 
 export function formatRevenue(amount: number): string {
-  if (amount >= 1000000) return `${CURRENCY_SYMBOL}${(amount / 1000000).toFixed(1)}M`;
-  if (amount >= 1000) return `${CURRENCY_SYMBOL}${(amount / 1000).toFixed(1)}K`;
-  return `${CURRENCY_SYMBOL}${amount.toFixed(2)}`;
+  const sym = getSymbol();
+  const a = toDisplayAmount(amount);
+  if (a >= 1000000) return `${sym}${(a / 1000000).toFixed(1)}M`;
+  if (a >= 1000) return `${sym}${(a / 1000).toFixed(1)}K`;
+  return `${sym}${a.toFixed(2)}`;
 }
