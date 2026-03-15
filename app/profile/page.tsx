@@ -37,10 +37,25 @@ export default function ProfilePage() {
   const [cropList, setCropList] = useState<CropType[]>([]);
   const [addCropValue, setAddCropValue] = useState('');
   const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [tokenBalance, setTokenBalance] = useState<{
+    uiAmountString: string;
+    mint: string;
+  } | null>(null);
+  const [tokenBalanceLoading, setTokenBalanceLoading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     api.get<Order[]>(`/api/users/${user.id}/orders`).then(setOrders).finally(() => setLoading(false));
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    setTokenBalanceLoading(true);
+    api
+      .get<{ uiAmountString: string; mint: string }>('/api/users/me/token-balance')
+      .then(setTokenBalance)
+      .catch(() => setTokenBalance(null))
+      .finally(() => setTokenBalanceLoading(false));
   }, [user]);
 
   useEffect(() => {
@@ -164,6 +179,26 @@ export default function ProfilePage() {
           </div>
           <p className="text-muted text-xs font-mono break-all mt-1">{user.address}</p>
           {user.email && <p className="text-muted text-xs font-mono break-all">{user.email}</p>}
+
+          {/* USDC balance (app mint via Helius) — money-style */}
+          <div className="mt-3 rounded-xl border border-border bg-gradient-to-br from-emerald-500/8 to-emerald-600/4 dark:from-emerald-500/12 dark:to-emerald-600/8 p-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted">
+              {process.env.NEXT_PUBLIC_SOLANA_NETWORK !== 'mainnet' ? 'USDC (devnet)' : 'USDC balance'}
+            </p>
+            {tokenBalanceLoading ? (
+              <p className="text-muted text-sm mt-1 tabular-nums">Loading…</p>
+            ) : tokenBalance ? (
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
+                <span className="text-muted font-normal text-lg">$</span>
+                {(Number(tokenBalance.uiAmountString) || 0).toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </p>
+            ) : (
+              <p className="text-muted text-sm mt-1 tabular-nums">—</p>
+            )}
+          </div>
 
           <div className="flex flex-wrap gap-2 mt-3">
             <Button variant="outline" size="sm" onClick={toggleIsFarmer} className="min-h-[2.5rem] touch-manipulation">

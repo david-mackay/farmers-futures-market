@@ -8,6 +8,10 @@ import { solanaAdapter, appkitProjectId } from '@/config/appkit-config';
 
 const queryClient = new QueryClient();
 
+/** Default to devnet; set NEXT_PUBLIC_SOLANA_NETWORK=mainnet for mainnet. */
+const defaultSolanaNetwork =
+  process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'mainnet' ? solana : solanaDevnet;
+
 const metadata = {
   name: "Future's Farmer's Market",
   description: "A Farmers' Futures Trading Post",
@@ -20,7 +24,7 @@ if (appkitProjectId && appkitProjectId.trim().length > 0) {
     adapters: [solanaAdapter],
     projectId: appkitProjectId,
     networks: [solana, solanaTestnet, solanaDevnet],
-    defaultNetwork: solana,
+    defaultNetwork: defaultSolanaNetwork,
     metadata,
     features: {
       email: true,

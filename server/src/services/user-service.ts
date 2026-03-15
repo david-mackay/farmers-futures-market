@@ -45,10 +45,15 @@ export async function createUser(
   return (await getUserById(id))!;
 }
 
+export interface GetOrCreateUserResult {
+  user: User;
+  created: boolean;
+}
+
 export async function getOrCreateUser(
   address: string,
   opts?: { email?: string | null; display_name?: string; is_farmer?: boolean }
-): Promise<User> {
+): Promise<GetOrCreateUserResult> {
   const existing = await getUserByAddress(address);
   if (existing) {
     const patch: { email?: string | null; display_name?: string } = {};
@@ -59,11 +64,14 @@ export async function getOrCreateUser(
       await db.run('UPDATE users SET email = $1 WHERE id = $2', [patch.email ?? null, existing.id]);
     if (patch.display_name !== undefined)
       await db.run('UPDATE users SET display_name = $1 WHERE id = $2', [patch.display_name, existing.id]);
-    return (patch.email !== undefined || patch.display_name !== undefined ? await getUserById(existing.id) : existing)!;
+    const user =
+      patch.email !== undefined || patch.display_name !== undefined ? await getUserById(existing.id) : existing;
+    return { user: user!, created: false };
   }
   const displayName = opts?.display_name?.trim() || `User ${address.slice(0, 4)}…${address.slice(-4)}`;
   const role = opts?.is_farmer ? UserRole.FARMER : UserRole.TRADER;
-  return createUser(address, displayName, role, opts?.email);
+  const user = await createUser(address, displayName, role, opts?.email);
+  return { user, created: true };
 }
 
 export async function updateUser(

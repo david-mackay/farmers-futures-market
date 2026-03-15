@@ -4,9 +4,21 @@ import { validate } from '../middleware/validate';
 import { updateUserSchema } from '../shared/validation';
 import * as userService from '../services/user-service';
 import * as orderService from '../services/order-service';
+import { getUsdcBalanceForWallet } from '../solana/usdc';
+import { getUsdcMint } from '../solana/config';
 
 export function createUsersRouter() {
   const router = Router();
+
+  router.get('/me/token-balance', requireAuth, async (req: AuthRequest, res) => {
+    const user = await userService.getUserById(req.userId!);
+    if (!user?.address) {
+      res.status(400).json({ error: 'User wallet address not found' });
+      return;
+    }
+    const balance = await getUsdcBalanceForWallet(user.address);
+    res.json(balance ?? { amount: '0', decimals: 6, uiAmount: 0, uiAmountString: '0', mint: getUsdcMint() });
+  });
 
   router.get('/', async (_req, res) => {
     const users = await userService.getAllUsers();

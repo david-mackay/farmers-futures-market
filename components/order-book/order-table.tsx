@@ -26,7 +26,7 @@ export function OrderTable({ orders, onOrderUpdate }: OrderTableProps) {
 
   const handleFillConfirm = async () => {
     if (!confirmOrder) return;
-    if (devMode) {
+    if (devMode || confirmOrder.type === 'BID') {
       setFillLoading(true);
       try {
         await api.post(`/api/orders/${confirmOrder.id}/fill`);
@@ -125,9 +125,9 @@ export function OrderTable({ orders, onOrderUpdate }: OrderTableProps) {
           order={confirmOrder}
           actionLabel={confirmOrder.type === 'BID' ? 'Sell to Bidder' : 'Buy Future'}
           onConfirm={handleFillConfirm}
-          loading={devMode ? fillLoading : fillPaymentLoading}
+          loading={confirmOrder.type === 'BID' || devMode ? fillLoading : fillPaymentLoading}
           error={fillPaymentError}
-          confirmDisabled={!devMode && !canFill}
+          confirmDisabled={confirmOrder.type === 'ASK' && !devMode && !canFill}
           confirmDisabledReason={!canFill ? 'Connect wallet first' : undefined}
         />
       )}

@@ -60,7 +60,7 @@ export function OrderBookView({ orders, cropType, deliveryDate, onUpdate }: Orde
 
   const handleFillConfirm = async () => {
     if (!confirmOrder) return;
-    if (devMode) {
+    if (devMode || confirmOrder.type === OrderType.BID) {
       setFillLoading(true);
       try {
         await api.post(`/api/orders/${confirmOrder.id}/fill`);
@@ -209,9 +209,9 @@ export function OrderBookView({ orders, cropType, deliveryDate, onUpdate }: Orde
           order={confirmOrder}
           actionLabel={confirmOrder.type === OrderType.BID ? 'Fill' : 'Buy'}
           onConfirm={handleFillConfirm}
-          loading={devMode ? fillLoading : fillPaymentLoading}
+          loading={confirmOrder.type === OrderType.BID || devMode ? fillLoading : fillPaymentLoading}
           error={fillPaymentError}
-          confirmDisabled={!devMode && !canFill}
+          confirmDisabled={confirmOrder.type === OrderType.ASK && !devMode && !canFill}
           confirmDisabledReason={!canFill ? 'Connect wallet first' : undefined}
         />
       )}

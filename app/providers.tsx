@@ -9,10 +9,11 @@ import { NavBar } from '@/components/layout/nav-bar';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { SignInGate } from '@/components/sign-in-gate';
 import { OnboardingModal } from '@/components/onboarding-modal';
+import { SignupBonusModal } from '@/components/signup-bonus-modal';
 import { isProfileIncomplete } from '@/lib/profile';
 
 function AuthAwareLayout({ children }: { children: ReactNode }) {
-  const { user, loading, refreshUser } = useUser();
+  const { user, loading, refreshUser, showSignupBonusModal, dismissSignupBonusModal } = useUser();
   const showOnboarding = user && isProfileIncomplete(user);
 
   if (loading) {
@@ -36,6 +37,9 @@ function AuthAwareLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-background transition-colors duration-200">
+      {showSignupBonusModal && (
+        <SignupBonusModal open onClose={dismissSignupBonusModal} />
+      )}
       {showOnboarding && (
         <OnboardingModal open user={user} onComplete={refreshUser} />
       )}

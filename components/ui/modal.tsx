@@ -24,11 +24,17 @@ export function Modal({ open, onClose, title, children, dismissible = true }: Mo
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 safe-area-pt">
       <div
-        className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${dismissible ? 'cursor-pointer' : ''}`}
+        className={`absolute inset-0 z-[100] bg-black/50 transition-opacity duration-200 ${dismissible ? 'cursor-pointer' : ''}`}
         onClick={dismissible ? onClose : undefined}
         aria-hidden
       />
-      <div role="dialog" aria-modal="true" aria-labelledby="modal-title" className="relative bg-card border border-border rounded-t-2xl sm:rounded-xl shadow-xl p-4 sm:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto safe-area-pb">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        className="relative z-[101] bg-card border border-border rounded-t-2xl sm:rounded-xl shadow-xl p-4 sm:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto safe-area-pb"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-4 gap-2">
           <h2 id="modal-title" className="text-lg sm:text-xl font-semibold text-foreground truncate">{title}</h2>
           {dismissible && (

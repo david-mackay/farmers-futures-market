@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { DeliveryDateModal } from '@/components/delivery-date-modal';
 import { useUser } from '@/hooks/use-user';
-import { useDevMode } from '@/hooks/use-dev-mode';
+import { useCreateBidWithDeposit } from '@/hooks/use-create-bid-with-deposit';
 import { api } from '@/lib/api-client';
 import { formatPrice, formatDeliveryDate, getNextContractDays, getPricePerKgLabel } from '@/lib/format';
 
@@ -26,7 +26,7 @@ const cropOptions = Object.entries(CROP_LABELS).map(([value, label]) => ({ value
 
 export function OrderForm({ onSuccess, defaultCrop, defaultType, defaultQuantityKg, defaultPricePerKg, defaultDeliveryDate }: OrderFormProps) {
   const { user } = useUser();
-  const devMode = useDevMode();
+  const { createBidOrder, loading: bidLoading, error: bidError, clearError: clearBidError, canCreateBid } = useCreateBidWithDeposit();
   const [cropType, setCropType] = useState(defaultCrop || '');
   const [orderType, setOrderType] = useState<string>(defaultType || OrderType.BID);
   const [pricePerKg, setPricePerKg] = useState(defaultPricePerKg?.toString() || '');
@@ -43,12 +43,26 @@ export function OrderForm({ onSuccess, defaultCrop, defaultType, defaultQuantity
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!devMode) {
-      alert('Wallet transactions not yet implemented. Enable DEV_MODE.');
+    setError('');
+    clearBidError();
+
+    if (orderType === OrderType.BID) {
+      const ok = await createBidOrder({
+        crop_type: cropType,
+        price: parseFloat(pricePerKg),
+        quantity: parseInt(quantityKg, 10),
+        delivery_date: deliveryDate,
+      });
+      if (ok) {
+        setCropType(defaultCrop ?? '');
+        setPricePerKg(defaultPricePerKg?.toString() ?? '');
+        setQuantityKg(defaultQuantityKg?.toString() ?? '');
+        setDeliveryDate(defaultDeliveryDate ?? '');
+        onSuccess?.();
+      }
       return;
     }
 
-    setError('');
     setLoading(true);
     try {
       await api.post('/api/orders', {
@@ -63,8 +77,8 @@ export function OrderForm({ onSuccess, defaultCrop, defaultType, defaultQuantity
       setQuantityKg(defaultQuantityKg?.toString() ?? '');
       setDeliveryDate(defaultDeliveryDate ?? '');
       onSuccess?.();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create order');
     } finally {
       setLoading(false);
     }
@@ -156,17 +170,26 @@ export function OrderForm({ onSuccess, defaultCrop, defaultType, defaultQuantity
         onSelect={(date) => setDeliveryDate(date)}
       />
 
-      {error && (
+      {(error || bidError) && (
         <div className="bg-accent-red/10 border border-accent-red/20 rounded-lg px-3 py-2 text-sm text-accent-red">
-          {error}
+          {orderType === OrderType.BID ? bidError : error}
         </div>
       )}
 
-      <Button type="submit" disabled={loading} className="w-full" size="lg">
-        {loading
-          ? 'Creating...'
-          : orderType === OrderType.BID
-            ? 'Post Buy Order'
+      <Button
+        type="submit"
+        disabled={orderType === OrderType.BID ? bidLoading || !canCreateBid : loading}
+        className="w-full"
+        size="lg"
+      >
+        {orderType === OrderType.BID
+          ? bidLoading
+            ? 'Depositing USDC…'
+            : !canCreateBid
+              ? 'Connect wallet to post buy order'
+              : 'Post Buy Order (deposit USDC)'
+          : loading
+            ? 'Creating...'
             : 'Post Sell Order'}
       </Button>
     </form>

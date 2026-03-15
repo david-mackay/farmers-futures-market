@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as userService from '../services/user-service';
+import { sendDevnetSignupBonus, sendDevnetSignupSol } from '../solana/usdc';
 
 export function createAuthRouter() {
   const router = Router();
@@ -17,11 +18,26 @@ export function createAuthRouter() {
       return;
     }
     try {
-      const user = await userService.getOrCreateUser(trimmed, {
+      const { user, created } = await userService.getOrCreateUser(trimmed, {
         email: email ?? null,
         display_name: display_name?.trim(),
       });
-      res.json(user);
+      let signupBonusSent = false;
+      if (created) {
+        try {
+          const sig = await sendDevnetSignupBonus(user.address);
+          signupBonusSent = sig != null;
+          // Devnet-only: small SOL for tx fees (sendDevnetSignupSol is no-op off devnet)
+          try {
+            await sendDevnetSignupSol(user.address);
+          } catch (e) {
+            console.error('auth/session devnet signup SOL', e);
+          }
+        } catch (e) {
+          console.error('auth/session devnet signup bonus', e);
+        }
+      }
+      res.json({ user, signupBonusSent });
     } catch (e) {
       console.error('auth/session', e);
       res.status(500).json({ error: 'Failed to create or get user' });

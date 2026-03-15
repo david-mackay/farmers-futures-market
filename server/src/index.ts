@@ -10,6 +10,7 @@ import { createUsersRouter } from './routes/users';
 import { createAnalyticsRouter } from './routes/analytics';
 import { createMarketRouter } from './routes/market';
 import { createVouchersRouter } from './routes/vouchers';
+import { createSolanaRpcRouter } from './routes/solana-rpc';
 import { setupSocketHandlers } from './socket/handlers';
 
 // Import db to trigger schema creation
@@ -36,6 +37,7 @@ app.use('/api/users', createUsersRouter());
 app.use('/api/analytics', createAnalyticsRouter());
 app.use('/api/market', createMarketRouter());
 app.use('/api/vouchers', createVouchersRouter(io));
+app.use('/api/solana-rpc', createSolanaRpcRouter());
 
 // Health check
 app.get('/api/health', (_req, res) => {
