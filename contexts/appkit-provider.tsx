@@ -23,7 +23,7 @@ if (appkitProjectId && appkitProjectId.trim().length > 0) {
   createAppKit({
     adapters: [solanaAdapter],
     projectId: appkitProjectId,
-    networks: [solana, solanaTestnet, solanaDevnet],
+    networks: [solanaDevnet, solana, solanaTestnet],
     defaultNetwork: defaultSolanaNetwork,
     metadata,
     features: {

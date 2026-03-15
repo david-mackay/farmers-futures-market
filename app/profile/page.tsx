@@ -13,6 +13,8 @@ import { Select } from '@/components/ui/select';
 import { formatPrice, formatDeliveryDate, formatKg } from '@/lib/format';
 import { CropType } from '@/shared/types';
 import { Pencil, X } from 'lucide-react';
+import { AppKitButton } from '@reown/appkit/react';
+import { appkitProjectId } from '@/config/appkit-config';
 import { VerificationModal } from '@/components/verification-modal';
 
 function parseCropsProduced(raw: string | null | undefined): CropType[] {
@@ -199,6 +201,14 @@ export default function ProfilePage() {
               <p className="text-muted text-sm mt-1 tabular-nums">—</p>
             )}
           </div>
+
+          {/* Wallet: network & Solana balance — Reown modal */}
+          {appkitProjectId && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <AppKitButton />
+              <span className="text-xs text-muted">Manage wallet, switch network, view SOL balance</span>
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2 mt-3">
             <Button variant="outline" size="sm" onClick={toggleIsFarmer} className="min-h-[2.5rem] touch-manipulation">

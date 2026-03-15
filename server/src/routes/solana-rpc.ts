@@ -5,10 +5,11 @@
 
 import { Router, Request, Response } from 'express';
 
+/** Default to devnet unless explicitly set to mainnet (matches server/src/solana/config.ts). */
 function getRpcUrl(): string | undefined {
   if (process.env.SOLANA_RPC_URL) return process.env.SOLANA_RPC_URL;
   const apiKey = process.env.HELIUS_API_KEY;
-  const isDevnet = process.env.SOLANA_NETWORK === 'devnet';
+  const isDevnet = process.env.SOLANA_NETWORK !== 'mainnet';
   if (apiKey) {
     return isDevnet
       ? `https://devnet.helius-rpc.com/?api-key=${apiKey}`
