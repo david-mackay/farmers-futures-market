@@ -58,7 +58,9 @@ export function FillConfirmModal({
           </div>
         </div>
         <p className="text-xs text-muted">
-          Confirming will open your wallet to sign and send USDC to escrow. The order is filled only after payment is verified on-chain.
+          {order.type === OrderType.ASK
+            ? 'Confirming will open your wallet to sign and send USDC to escrow. The order is filled only after payment is verified on-chain.'
+            : 'Confirming will accept the bidder\'s funded escrow and move the contract into delivery.'}
         </p>
         {error && (
           <p className="text-xs text-accent-red" role="alert">

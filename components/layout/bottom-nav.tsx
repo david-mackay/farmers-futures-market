@@ -5,9 +5,9 @@ import { usePathname } from 'next/navigation';
 import { BookOpen, LayoutDashboard, Package, Store, User } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/explore', label: 'Explore', icon: Store },
-  { href: '/deliveries', label: 'Deliveries', icon: Package },
+  { href: '/markets', label: 'Markets', icon: Store },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/deliveries', label: 'Contracts', icon: Package },
   { href: '/crops', label: 'Crops', icon: BookOpen },
   { href: '/profile', label: 'Profile', icon: User },
 ] as const;
@@ -22,7 +22,7 @@ export function BottomNav() {
     >
       <div className="grid grid-cols-5 h-14 min-h-[3.5rem] min-w-0 w-full">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || (href !== '/' && pathname.startsWith(href));
+          const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
               key={href}

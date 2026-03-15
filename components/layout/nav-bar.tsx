@@ -13,10 +13,10 @@ import { Badge } from '@/components/ui/badge';
 import { appkitProjectId } from '@/config/appkit-config';
 
 const NAV_LINKS = [
-  { href: '/', label: 'Dashboard' },
-  { href: '/explore', label: 'Explore' },
+  { href: '/markets', label: 'Markets' },
+  { href: '/dashboard', label: 'Dashboard' },
   { href: '/funds', label: 'Funds' },
-  { href: '/deliveries', label: 'Deliveries' },
+  { href: '/deliveries', label: 'Contracts' },
   { href: '/crops', label: 'Crops' },
   { href: '/profile', label: 'Profile' },
 ];

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Order } from '@/shared/types';
 import { CROP_LABELS } from '@/shared/constants';
 import { useUser } from '@/hooks/use-user';
@@ -14,10 +15,13 @@ import { CropType } from '@/shared/types';
 interface DeliveryOrderCardProps {
   order: Order;
   loading: boolean;
-  runEscrow: (action: 'fund' | 'deliver' | 'confirm' | 'contest' | 'resolve', resolution?: 'release' | 'refund') => Promise<void>;
+  tradeHref?: string;
+  /** When set, user already has an open relist for this contract; they must cancel it before relisting again */
+  openRelistOrder?: Order;
+  runEscrow: (action: 'fund' | 'deliver' | 'confirm' | 'contest') => Promise<void>;
 }
 
-export function DeliveryOrderCard({ order, loading, runEscrow }: DeliveryOrderCardProps) {
+export function DeliveryOrderCard({ order, loading, tradeHref, openRelistOrder, runEscrow }: DeliveryOrderCardProps) {
   useCurrency(); // re-render when JMD/USD toggled
   const { user } = useUser();
   if (!user) return null;
@@ -52,20 +56,30 @@ export function DeliveryOrderCard({ order, loading, runEscrow }: DeliveryOrderCa
           </div>
         </div>
         <div className="mt-2 pt-2 border-t border-border/60 flex flex-wrap items-center gap-2 text-xs">
+          {openRelistOrder ? (
+            <span className="text-muted" title="Cancel your open relist order in Profile before relisting again.">
+              Open relist active —{' '}
+              <Link href="/profile" className="text-primary hover:underline font-medium">
+                cancel it first
+              </Link>
+            </span>
+          ) : tradeHref ? (
+            <Link
+              href={tradeHref}
+              className="inline-flex items-center justify-center rounded-md border border-primary/40 px-3.5 py-1.5 text-xs font-medium text-primary hover:bg-primary/5"
+              title={delivering
+                ? 'This will absolve you of your responsibility to deliver the goods.'
+                : 'This will absolve you of your responsibility to purchase the goods.'}
+            >
+              Relist
+            </Link>
+          ) : null}
           {order.refunded_at && <span className="text-muted">Refunded to buyer</span>}
           {order.funds_released_at && !order.refunded_at && (
             <span className="text-muted">Funds released</span>
           )}
           {order.contested_at && !order.funds_released_at && !order.refunded_at && (
-            <>
-              <span className="text-accent-red">Contested – under review</span>
-              <Button size="sm" variant="outline" disabled={loading} onClick={() => runEscrow('resolve', 'release')}>
-                Resolve (release to seller)
-              </Button>
-              <Button size="sm" variant="outline" disabled={loading} onClick={() => runEscrow('resolve', 'refund')}>
-                Resolve (refund buyer)
-              </Button>
-            </>
+            <span className="text-accent-red">Dispute has been filed. Settlement is paused for manual review.</span>
           )}
           {!order.funds_released_at && !order.contested_at && asBuyer && (
             <>
@@ -83,9 +97,9 @@ export function DeliveryOrderCard({ order, loading, runEscrow }: DeliveryOrderCa
                     Confirm receipt
                   </Button>
                   <Button size="sm" variant="outline" disabled={loading} onClick={() => runEscrow('contest')}>
-                    Contest
+                    File dispute
                   </Button>
-                  <span className="text-muted">Auto-releases in 1 day if no action</span>
+                  <span className="text-muted">Auto-releases in 1 day unless a dispute is filed</span>
                 </>
               )}
             </>

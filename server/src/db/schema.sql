@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS orders (
   funds_released_at TIMESTAMPTZ,
   refunded_at TIMESTAMPTZ,
   total_amount_usdc BIGINT,
+  relist_source_order_id TEXT REFERENCES orders(id),
   pending_fill_by TEXT,
   pending_fill_expires_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

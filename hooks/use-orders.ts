@@ -34,9 +34,11 @@ export function useOrders(options: UseOrdersOptions = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const optionsRef = useRef(options);
+  const requestSeqRef = useRef(0);
   optionsRef.current = options;
 
   const fetchOrders = useCallback(async () => {
+    const requestSeq = ++requestSeqRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -50,10 +52,13 @@ export function useOrders(options: UseOrdersOptions = {}) {
       if (options.creator_id) params.set('creator_id', options.creator_id);
       const qs = params.toString();
       const data = await api.get<Order[]>(`/api/orders${qs ? `?${qs}` : ''}`);
+      if (requestSeq !== requestSeqRef.current) return;
       setOrders(data);
     } catch (err: unknown) {
+      if (requestSeq !== requestSeqRef.current) return;
       setError(err instanceof Error ? err.message : 'Failed to fetch orders');
     } finally {
+      if (requestSeq !== requestSeqRef.current) return;
       setLoading(false);
     }
   }, [options.crop_type, options.type, options.status, options.delivery_month, options.delivery_date, options.filled_by, options.creator_id]);

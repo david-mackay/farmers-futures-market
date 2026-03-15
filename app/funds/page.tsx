@@ -193,10 +193,10 @@ export default function FundsPage() {
 
       <div className="px-4 sm:px-6 py-4 border-t border-border flex flex-wrap gap-3 text-sm">
         <Link href="/deliveries" className="text-primary hover:underline">
-          Deliveries & attestations
+          Contracts & attestations
         </Link>
-        <Link href="/explore" className="text-primary hover:underline">
-          Explore order book
+        <Link href="/markets" className="text-primary hover:underline">
+          Markets
         </Link>
       </div>
     </div>

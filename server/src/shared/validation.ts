@@ -7,6 +7,7 @@ export const createOrderSchema = z.object({
   price: z.number().positive(),
   quantity: z.number().int().positive(),
   delivery_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  relist_source_order_id: z.string().optional(),
 });
 
 export const fillOrderSchema = z.object({

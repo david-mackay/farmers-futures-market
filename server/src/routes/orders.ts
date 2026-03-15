@@ -57,6 +57,7 @@ export function createOrdersRouter(io: SocketServer) {
       price?: number;
       quantity?: number;
       delivery_date?: string;
+      relist_source_order_id?: string;
     };
     const result = await orderService.prepareBidOrder(
       req.userId!,
@@ -65,6 +66,7 @@ export function createOrdersRouter(io: SocketServer) {
         price: body.price!,
         quantity: body.quantity!,
         delivery_date: body.delivery_date!,
+        relist_source_order_id: body.relist_source_order_id,
       },
       creatorWallet,
     );
@@ -89,6 +91,7 @@ export function createOrdersRouter(io: SocketServer) {
       price?: number;
       quantity?: number;
       delivery_date?: string;
+      relist_source_order_id?: string;
     };
     if (!body.orderId || !body.txSignature) {
       res.status(400).json({ error: "orderId and txSignature are required" });
@@ -101,6 +104,7 @@ export function createOrdersRouter(io: SocketServer) {
       price: body.price!,
       quantity: body.quantity!,
       delivery_date: body.delivery_date!,
+      relist_source_order_id: body.relist_source_order_id,
     });
     if (result.error) {
       res.status(400).json({ error: result.error });
@@ -171,8 +175,8 @@ export function createOrdersRouter(io: SocketServer) {
       });
   });
 
-  router.post("/:id/fill", requireAuth, async (req: AuthRequest, res) => {
-    const result = await orderService.fillOrder(
+  router.post("/:id/accept-bid", requireAuth, async (req: AuthRequest, res) => {
+    const result = await orderService.acceptBidOrder(
       req.userId!,
       req.params.id as string,
     );
@@ -270,24 +274,6 @@ export function createOrdersRouter(io: SocketServer) {
       res.json(result.order);
     },
   );
-
-  // Escrow: platform resolves dispute (release to seller or refund to buyer)
-  router.post("/:id/escrow/resolve", requireAuth, (req: AuthRequest, res) => {
-    const resolution = req.body?.resolution === "refund" ? "refund" : "release";
-    orderService
-      .resolveDispute(req.params.id as string, resolution)
-      .then((result) => {
-        if (result.error) {
-          res.status(400).json({ error: result.error });
-          return;
-        }
-        res.json(result.order);
-      })
-      .catch((err) => {
-        console.error("escrow/resolve", err);
-        res.status(500).json({ error: "Failed to resolve dispute" });
-      });
-  });
 
   router.delete("/:id", requireAuth, async (req: AuthRequest, res) => {
     const result = await orderService.cancelOrder(

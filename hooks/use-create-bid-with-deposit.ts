@@ -23,6 +23,7 @@ export function useCreateBidWithDeposit() {
       price: number;
       quantity: number;
       delivery_date: string;
+      relist_source_order_id?: string;
     }): Promise<boolean> => {
       setError(null);
       setLoading(true);

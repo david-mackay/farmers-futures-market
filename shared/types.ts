@@ -90,6 +90,8 @@ export interface Order {
   refunded_at?: string | null;
   /** Total order amount in USDC smallest unit (6 decimals). Set when filled. */
   total_amount_usdc?: number | null;
+  /** Optional source contract order id when this order is a relist/transfer listing. */
+  relist_source_order_id?: string | null;
   created_at: string;
 }
 
@@ -112,6 +114,7 @@ export interface CreateOrderRequest {
   price: number;
   quantity: number;
   delivery_date: string;
+  relist_source_order_id?: string;
 }
 
 export interface FillOrderRequest {
