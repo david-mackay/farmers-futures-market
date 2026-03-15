@@ -18,7 +18,7 @@ export function createVouchersRouter(io: SocketServer) {
       res.status(400).json({ error: 'Positive listed_price is required' });
       return;
     }
-    const result = orderService.listVoucher(req.userId!, req.params.id, listed_price);
+    const result = orderService.listVoucher(req.userId!, req.params.id as string, listed_price);
     if (result.error) { res.status(400).json({ error: result.error }); return; }
     io.emit('voucher:listed', result.voucher);
     res.json(result.voucher);
@@ -26,7 +26,7 @@ export function createVouchersRouter(io: SocketServer) {
 
   // Buy a listed voucher
   router.post('/:id/buy', requireAuth, (req: AuthRequest, res) => {
-    const result = orderService.buyVoucher(req.userId!, req.params.id);
+    const result = orderService.buyVoucher(req.userId!, req.params.id as string);
     if (result.error) { res.status(400).json({ error: result.error }); return; }
     io.emit('voucher:sold', result.voucher);
     res.json(result.voucher);

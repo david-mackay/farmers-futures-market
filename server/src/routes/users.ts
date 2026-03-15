@@ -33,7 +33,7 @@ export function createUsersRouter() {
 
   // Update user
   router.patch('/:id', validate(updateUserSchema), (req, res) => {
-    const user = userService.updateUser(req.params.id, req.body);
+    const user = userService.updateUser(req.params.id as string, req.body);
     if (!user) { res.status(404).json({ error: 'User not found' }); return; }
     res.json(user);
   });

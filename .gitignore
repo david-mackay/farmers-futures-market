@@ -41,6 +41,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# server build output
+server/dist
+
 # sqlite
 server/data/*.db*
 server/data/market.db-shm
