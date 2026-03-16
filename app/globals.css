@@ -101,3 +101,48 @@ body {
 .logo-font {
   font-family: var(--font-logo), Impact, sans-serif;
 }
+
+/* List stagger: fade-in for rows/cards (respects prefers-reduced-motion via globals) */
+@keyframes list-item-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.list-stagger-item {
+  animation: list-item-enter 0.18s ease-out forwards;
+}
+
+/* Sign-in gate: staggered reveal (logo → heading → description → button) */
+@keyframes signin-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.signin-stagger {
+  animation: signin-enter 0.25s ease-out forwards;
+}
+
+/* Toast slide-in from bottom */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-toast-in {
+  animation: toast-in 0.2s ease-out forwards;
+}

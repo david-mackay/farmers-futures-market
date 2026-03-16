@@ -11,6 +11,7 @@ import { CropNameLink } from '@/components/crop-name-link';
 import { formatPricePerKg, formatDeliveryDate } from '@/lib/format';
 import { useCurrency } from '@/contexts/currency-context';
 import { api } from '@/lib/api-client';
+import { useToast } from '@/components/ui/toast';
 
 interface LastPriceResult {
   livePrice: number | null;
@@ -28,6 +29,7 @@ interface OrderBookViewProps {
 export function OrderBookView({ orders, cropType, deliveryDate, onUpdate }: OrderBookViewProps) {
   useCurrency(); // re-render when JMD/USD toggled
   const { user } = useUser();
+  const { showToast } = useToast();
   const { executeFill, loading: fillPaymentLoading, error: fillPaymentError, clearError: clearFillError, canFill } = useFillWithPayment();
   const [livePrice, setLivePrice] = useState<LastPriceResult>({ livePrice: null, source: null });
   const [confirmOrder, setConfirmOrder] = useState<Order | null>(null);
@@ -67,6 +69,7 @@ export function OrderBookView({ orders, cropType, deliveryDate, onUpdate }: Orde
         await api.post(`/api/orders/${confirmOrder.id}/accept-bid`);
         setConfirmOrder(null);
         onUpdate?.();
+        showToast('Bid accepted');
       } catch (err) {
         setFillError(err instanceof Error ? err.message : 'Failed to accept bid.');
       } finally {
@@ -78,6 +81,7 @@ export function OrderBookView({ orders, cropType, deliveryDate, onUpdate }: Orde
     if (ok) {
       setConfirmOrder(null);
       onUpdate?.();
+      showToast('Order filled');
     }
   };
 
@@ -138,7 +142,11 @@ export function OrderBookView({ orders, cropType, deliveryDate, onUpdate }: Orde
           </thead>
           <tbody className="divide-y divide-border">
             {rows.map((row, i) => (
-              <tr key={i} className="hover:bg-muted-bg/50 transition-colors duration-150">
+              <tr
+                key={i}
+                className="list-stagger-item hover:bg-muted-bg/50 transition-colors duration-150"
+                style={{ animationDelay: `${Math.min(i * 50, 300)}ms` }}
+              >
                 <td className="py-2 pl-2 sm:pl-3 pr-1 align-middle">
                   {row.bid && user && row.bid.creator_id !== user.id ? (
                     <Button

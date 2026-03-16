@@ -10,6 +10,7 @@ import { CropType } from '@/shared/types';
 import { CropNameLink } from '@/components/crop-name-link';
 import { formatDeliveryMonth, formatKg, formatPrice } from '@/lib/format';
 import { useCurrency } from '@/contexts/currency-context';
+import { Spinner } from '@/components/ui/spinner';
 
 interface MarketActivityOverview {
   open_orders: number;
@@ -146,7 +147,12 @@ export default function MarketPulsePage() {
   );
 
   if (loading) {
-    return <div className="py-16 text-center text-muted">Loading market activity…</div>;
+    return (
+      <div className="flex flex-col items-center gap-3 py-16">
+        <Spinner size="lg" variant="primary" />
+        <p className="text-muted text-sm">Loading market activity…</p>
+      </div>
+    );
   }
 
   if (error || !data) {

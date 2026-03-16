@@ -10,9 +10,11 @@ import { useDevMode } from '@/hooks/use-dev-mode';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { formatPrice, formatRevenue, formatQuantity } from '@/lib/format';
 import { useCurrency } from '@/contexts/currency-context';
 import Link from 'next/link';
+import { useToast } from '@/components/ui/toast';
 
 const cropOptions = Object.entries(CROP_LABELS).map(([value, label]) => ({ value, label }));
 
@@ -22,6 +24,7 @@ function HedgeFlowContent() {
   const router = useRouter();
   const { user } = useUser();
   const devMode = useDevMode();
+  const { showToast } = useToast();
 
   const [step, setStep] = useState(1);
   const [cropType, setCropType] = useState(searchParams.get('crop') || '');
@@ -67,6 +70,7 @@ function HedgeFlowContent() {
       });
       setPosted(true);
       setStep(3);
+      showToast('Sell order posted');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -103,24 +107,35 @@ function HedgeFlowContent() {
         </p>
       </section>
 
-      {/* Steps indicator: wrap on small screens */}
+      {/* Steps indicator + progress bar */}
       <section className="border-b border-border py-3">
-      <div className="flex flex-wrap items-center gap-2">
-        {[1, 2, 3].map(s => (
-          <div key={s} className="flex items-center gap-2">
-            <div className={`
-              w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
-              ${step >= s ? 'bg-primary text-white' : 'bg-muted-bg text-muted'}
-            `}>
-              {s}
+        <div className="flex flex-wrap items-center gap-2">
+          {[1, 2, 3].map(s => (
+            <div key={s} className="flex items-center gap-2">
+              <div className={`
+                w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors duration-200
+                ${step >= s ? 'bg-primary text-white' : 'bg-muted-bg text-muted'}
+              `}>
+                {s}
+              </div>
+              <span className={`text-sm transition-colors duration-200 ${step >= s ? 'text-foreground font-medium' : 'text-muted'}`}>
+                {s === 1 ? 'Select & Input' : s === 2 ? 'Review Yield' : 'Confirmed'}
+              </span>
+              {s < 3 && <div className={`w-8 h-0.5 transition-colors duration-200 ${step > s ? 'bg-primary' : 'bg-border'}`} />}
             </div>
-            <span className={`text-sm ${step >= s ? 'text-foreground font-medium' : 'text-muted'}`}>
-              {s === 1 ? 'Select & Input' : s === 2 ? 'Review Yield' : 'Confirmed'}
-            </span>
-            {s < 3 && <div className={`w-8 h-0.5 ${step > s ? 'bg-primary' : 'bg-border'}`} />}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+        <div className="mt-2 h-1 rounded-full bg-muted-bg overflow-hidden">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-300 ease-out"
+            style={{ width: `${(step / 3) * 100}%` }}
+            role="progressbar"
+            aria-valuenow={step}
+            aria-valuemin={1}
+            aria-valuemax={3}
+            aria-label="Progress"
+          />
+        </div>
       </section>
 
       {/* Step 1: Input */}
@@ -144,8 +159,15 @@ function HedgeFlowContent() {
             placeholder="e.g. 50"
           />
           {step === 1 && (
-            <Button onClick={calculateYield} disabled={!cropType || !acreage || calcLoading} className="w-full min-h-[2.75rem] touch-manipulation">
-              {calcLoading ? 'Calculating...' : 'Calculate Expected Yield'}
+            <Button onClick={calculateYield} disabled={!cropType || !acreage || calcLoading} className="w-full min-h-[2.75rem] touch-manipulation" aria-busy={calcLoading}>
+              {calcLoading ? (
+                <span className="inline-flex items-center justify-center gap-2">
+                  <Spinner size="sm" variant="inverse" />
+                  Calculating…
+                </span>
+              ) : (
+                'Calculate Expected Yield'
+              )}
             </Button>
           )}
         </div>
@@ -153,7 +175,7 @@ function HedgeFlowContent() {
 
       {/* Step 2: Review & Post */}
       {calc && step >= 2 && (
-        <section className="border-b border-border py-4">
+        <section className="border-b border-border py-4 list-stagger-item" style={{ animationDelay: '0ms' }}>
           <h2 className="text-base font-semibold text-foreground mb-3">Step 2: Review & Lock In Price (per kg)</h2>
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="bg-muted-bg rounded-lg p-4">
@@ -196,8 +218,15 @@ function HedgeFlowContent() {
                 placeholder="e.g. 500"
               />
               {error && <p className="text-sm text-accent-red">{error}</p>}
-              <Button onClick={postSellOrder} disabled={!deliveryDate || !quantityKg || quantityKgNum <= 0 || posting} className="w-full min-h-[2.75rem] touch-manipulation" size="lg">
-                {posting ? 'Posting Sell Order...' : `Post Sell Order for ${formatRevenue(projectedRevenueFromKg)}`}
+              <Button onClick={postSellOrder} disabled={!deliveryDate || !quantityKg || quantityKgNum <= 0 || posting} className="w-full min-h-[2.75rem] touch-manipulation" size="lg" aria-busy={posting}>
+                {posting ? (
+                  <span className="inline-flex items-center justify-center gap-2">
+                    <Spinner size="sm" variant="inverse" />
+                    Posting Sell Order…
+                  </span>
+                ) : (
+                  `Post Sell Order for ${formatRevenue(projectedRevenueFromKg)}`
+                )}
               </Button>
             </div>
           )}
@@ -206,7 +235,7 @@ function HedgeFlowContent() {
 
       {/* Step 3: Success */}
       {posted && (
-        <section className="border-b border-border border-l-4 border-l-primary py-6 px-4">
+        <section className="border-b border-border border-l-4 border-l-primary py-6 px-4 list-stagger-item" style={{ animationDelay: '0ms' }}>
           <div className="text-center py-4">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-2" aria-hidden>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -234,7 +263,12 @@ function HedgeFlowContent() {
 
 export default function HedgeFlowPage() {
   return (
-    <Suspense fallback={<div className="text-center py-12 text-muted">Loading...</div>}>
+    <Suspense fallback={
+        <div className="flex flex-col items-center gap-3 py-12">
+          <Spinner size="lg" variant="primary" />
+          <p className="text-muted text-sm">Loading…</p>
+        </div>
+      }>
       <HedgeFlowContent />
     </Suspense>
   );

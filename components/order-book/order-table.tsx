@@ -11,6 +11,7 @@ import { useFillWithPayment } from '@/hooks/use-fill-with-payment';
 import { formatPrice, formatKg, formatDeliveryDate, cropLabel } from '@/lib/format';
 import { useCurrency } from '@/contexts/currency-context';
 import { api } from '@/lib/api-client';
+import { useToast } from '@/components/ui/toast';
 
 interface OrderTableProps {
   orders: Order[];
@@ -20,6 +21,7 @@ interface OrderTableProps {
 export function OrderTable({ orders, onOrderUpdate }: OrderTableProps) {
   useCurrency(); // re-render when JMD/USD toggled
   const { user } = useUser();
+  const { showToast } = useToast();
   const { executeFill, loading: fillPaymentLoading, error: fillPaymentError, clearError: clearFillError, canFill } = useFillWithPayment();
   const [confirmOrder, setConfirmOrder] = useState<Order | null>(null);
   const [fillLoading, setFillLoading] = useState(false);
@@ -34,6 +36,7 @@ export function OrderTable({ orders, onOrderUpdate }: OrderTableProps) {
         await api.post(`/api/orders/${confirmOrder.id}/accept-bid`);
         setConfirmOrder(null);
         onOrderUpdate?.();
+        showToast('Bid accepted');
       } catch (err) {
         setFillError(err instanceof Error ? err.message : 'Failed to accept bid.');
       } finally {
@@ -45,6 +48,7 @@ export function OrderTable({ orders, onOrderUpdate }: OrderTableProps) {
     if (ok) {
       setConfirmOrder(null);
       onOrderUpdate?.();
+      showToast('Order filled');
     }
   };
 
@@ -71,8 +75,12 @@ export function OrderTable({ orders, onOrderUpdate }: OrderTableProps) {
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
-          {orders.map(order => (
-            <tr key={order.id} className="hover:bg-muted-bg/50 transition-colors">
+          {orders.map((order, i) => (
+            <tr
+              key={order.id}
+              className="list-stagger-item hover:bg-muted-bg/50 transition-colors"
+              style={{ animationDelay: `${Math.min(i * 50, 300)}ms` }}
+            >
               <td className="py-3 font-medium">{cropLabel(order.crop_type)}</td>
               <td className="py-3">
                 <Badge variant={order.type === 'BID' ? 'bid' : 'ask'}>
@@ -101,7 +109,10 @@ export function OrderTable({ orders, onOrderUpdate }: OrderTableProps) {
                     action="Cancel"
                     endpoint={`/api/orders/${order.id}`}
                     method="delete"
-                    onSuccess={onOrderUpdate}
+                    onSuccess={() => {
+                      onOrderUpdate?.();
+                      showToast('Order cancelled');
+                    }}
                     variant="danger"
                     size="sm"
                   />

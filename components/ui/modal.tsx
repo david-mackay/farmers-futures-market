@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState, useRef } from 'react';
 
 interface ModalProps {
   open: boolean;
@@ -12,19 +12,51 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, dismissible = true }: ModalProps) {
+  const [isExiting, setIsExiting] = useState(false);
+  const [hasEntered, setHasEntered] = useState(false);
+  const prevOpen = useRef(open);
+
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = ''; };
+      setHasEntered(false);
+      const raf = requestAnimationFrame(() => {
+        requestAnimationFrame(() => setHasEntered(true));
+      });
+      return () => {
+        document.body.style.overflow = '';
+        cancelAnimationFrame(raf);
+      };
     }
   }, [open]);
 
-  if (!open) return null;
+  useEffect(() => {
+    if (prevOpen.current && !open) setIsExiting(true);
+    prevOpen.current = open;
+  }, [open]);
+
+  useEffect(() => {
+    if (!isExiting) return;
+    const t = setTimeout(() => setIsExiting(false), 280);
+    return () => clearTimeout(t);
+  }, [isExiting]);
+
+  const visible = open || isExiting;
+  const showBackdrop = visible;
+  const animateIn = open && hasEntered && !isExiting;
+  const animateOut = isExiting;
+
+  if (!visible) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 safe-area-pt">
       <div
-        className={`absolute inset-0 z-[100] bg-black/50 transition-opacity duration-200 ${dismissible ? 'cursor-pointer' : ''}`}
+        className={`
+          absolute inset-0 z-[100] bg-black/50
+          transition-opacity duration-200 ease-out
+          ${animateIn && !animateOut ? 'opacity-100' : 'opacity-0'}
+          ${dismissible ? 'cursor-pointer' : 'pointer-events-none'}
+        `}
         onClick={dismissible ? onClose : undefined}
         aria-hidden
       />
@@ -32,7 +64,13 @@ export function Modal({ open, onClose, title, children, dismissible = true }: Mo
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className="relative z-[101] bg-card border border-border rounded-t-2xl sm:rounded-xl shadow-xl p-4 sm:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto safe-area-pb"
+        className={`
+          relative z-[101] bg-card border border-border rounded-t-2xl sm:rounded-xl shadow-xl p-4 sm:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto safe-area-pb
+          transition-all duration-200 ease-out
+          sm:transition-[transform,opacity] sm:duration-200 sm:ease-out
+          ${!animateIn ? 'translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0' : 'translate-y-0 sm:scale-100 sm:opacity-100'}
+          ${animateOut ? 'translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0' : ''}
+        `}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4 gap-2">

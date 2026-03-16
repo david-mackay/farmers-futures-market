@@ -3,6 +3,7 @@
 import { Order, OrderType } from '@/shared/types';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { formatKg, formatDeliveryDate, orderTotalUsd } from '@/lib/format';
 import { CROP_LABELS } from '@/shared/constants';
 import { JMD_PER_USD } from '@/shared/constants';
@@ -71,8 +72,22 @@ export function FillConfirmModal({
           <Button variant="outline" className="flex-1" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
-          <Button className="flex-1" onClick={onConfirm} disabled={loading || confirmDisabled}>
-            {loading ? 'Processing...' : confirmDisabled ? (confirmDisabledReason ?? `Confirm ${actionLabel}`) : `Confirm ${actionLabel}`}
+          <Button
+            className="flex-1"
+            onClick={onConfirm}
+            disabled={loading || confirmDisabled}
+            aria-busy={loading}
+          >
+            {loading ? (
+              <span className="inline-flex items-center justify-center gap-2">
+                <Spinner size="sm" variant="inverse" />
+                Processing…
+              </span>
+            ) : confirmDisabled ? (
+              confirmDisabledReason ?? `Confirm ${actionLabel}`
+            ) : (
+              `Confirm ${actionLabel}`
+            )}
           </Button>
         </div>
       </div>

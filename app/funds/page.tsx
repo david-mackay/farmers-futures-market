@@ -12,6 +12,7 @@ import { formatDeliveryDate, formatKg, formatUsdc, orderTotalUsd } from '@/lib/f
 import { isSeller, isBuyer } from '@/lib/order-role';
 import { CropNameLink } from '@/components/crop-name-link';
 import { CropType } from '@/shared/types';
+import { Spinner } from '@/components/ui/spinner';
 
 function orderAmountUsdc(order: Order): number {
   return order.total_amount_usdc ?? Math.round((order.price / JMD_PER_USD) * order.quantity * 1e6);
@@ -138,7 +139,10 @@ export default function FundsPage() {
       )}
 
       {loading ? (
-        <div className="py-12 text-center text-muted text-sm">Loading…</div>
+        <div className="flex flex-col items-center gap-3 py-12">
+          <Spinner size="lg" variant="primary" />
+          <p className="text-muted text-sm">Loading…</p>
+        </div>
       ) : (
         <div className="flex-1 overflow-auto">
           {sections.map(({ title, subtitle, icon: Icon, amount, items, empty }) => (

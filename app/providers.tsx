@@ -11,6 +11,8 @@ import { SignInGate } from '@/components/sign-in-gate';
 import { OnboardingModal } from '@/components/onboarding-modal';
 import { SignupBonusModal } from '@/components/signup-bonus-modal';
 import { isProfileIncomplete } from '@/lib/profile';
+import { Spinner } from '@/components/ui/spinner';
+import { ToastProvider } from '@/components/ui/toast';
 
 function AuthAwareLayout({ children }: { children: ReactNode }) {
   const { user, loading, refreshUser, showSignupBonusModal, dismissSignupBonusModal } = useUser();
@@ -18,7 +20,8 @@ function AuthAwareLayout({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-[40vh] flex items-center justify-center">
+      <div className="min-h-[40vh] flex flex-col items-center justify-center gap-3">
+        <Spinner size="lg" variant="primary" />
         <p className="text-muted text-sm">Loading…</p>
       </div>
     );
@@ -57,9 +60,11 @@ export function Providers({ children }: { children: ReactNode }) {
     <ThemeProvider>
       <CurrencyProvider>
         <UserProvider>
-          <WatchedCropsProvider>
-            <AuthAwareLayout>{children}</AuthAwareLayout>
-          </WatchedCropsProvider>
+          <ToastProvider>
+            <WatchedCropsProvider>
+              <AuthAwareLayout>{children}</AuthAwareLayout>
+            </WatchedCropsProvider>
+          </ToastProvider>
         </UserProvider>
       </CurrencyProvider>
     </ThemeProvider>
