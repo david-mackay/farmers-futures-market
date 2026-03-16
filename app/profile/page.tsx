@@ -17,6 +17,9 @@ import { Pencil, X } from 'lucide-react';
 import { AppKitButton } from '@reown/appkit/react';
 import { appkitProjectId } from '@/config/appkit-config';
 import { VerificationModal } from '@/components/verification-modal';
+import { Spinner } from '@/components/ui/spinner';
+import { SkeletonRow } from '@/components/ui/skeleton';
+import { useToast } from '@/components/ui/toast';
 
 function parseCropsProduced(raw: string | null | undefined): CropType[] {
   if (!raw || !raw.trim()) return [];
@@ -32,6 +35,7 @@ export default function ProfilePage() {
   useCurrency(); // re-render when JMD/USD toggled
   const { user, refreshUser } = useUser();
   const { add: addToWatchlist } = useWatchedCrops();
+  const { showToast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<'name' | 'delivery' | 'farmer' | null>(null);
@@ -64,10 +68,11 @@ export default function ProfilePage() {
     try {
       await api.delete(`/api/orders/${orderId}`);
       await fetchOrders();
+      showToast('Order cancelled');
     } finally {
       setCancellingId(null);
     }
-  }, [fetchOrders]);
+  }, [fetchOrders, showToast]);
 
   useEffect(() => {
     if (!user) return;
@@ -142,7 +147,6 @@ export default function ProfilePage() {
     [cropList]
   );
 
-  if (loading) return <div className="text-center py-12 text-muted">Loading profile...</div>;
   if (!user) return <div className="text-center py-12 text-muted">Sign in to view your profile.</div>;
 
   return (
@@ -207,7 +211,10 @@ export default function ProfilePage() {
               {process.env.NEXT_PUBLIC_SOLANA_NETWORK !== 'mainnet' ? 'USDC (devnet)' : 'USDC balance'}
             </p>
             {tokenBalanceLoading ? (
-              <p className="text-muted text-sm mt-1 tabular-nums">Loading…</p>
+              <span className="inline-flex items-center gap-2 text-muted text-sm mt-1 tabular-nums">
+                <Spinner size="sm" variant="muted" />
+                Loading…
+              </span>
             ) : tokenBalance ? (
               <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
                 <span className="text-muted font-normal text-lg">$</span>
@@ -381,7 +388,11 @@ export default function ProfilePage() {
           <h2 className="text-base font-semibold text-foreground">Order history</h2>
         </div>
         {loading ? (
-          <div className="py-8 text-center text-muted text-sm">Loading...</div>
+          <div className="px-4 sm:px-6 divide-y divide-border">
+            {[1, 2, 3].map((i) => (
+              <SkeletonRow key={i} />
+            ))}
+          </div>
         ) : orders.length === 0 ? (
           <div className="py-8 text-center text-muted text-sm">No orders yet.</div>
         ) : (

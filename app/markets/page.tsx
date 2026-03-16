@@ -11,6 +11,8 @@ import { OrderBookView } from '@/components/order-book/order-book-view';
 import { OrderForm } from '@/components/order-book/order-form';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
+import { Spinner } from '@/components/ui/spinner';
+import { useToast } from '@/components/ui/toast';
 import { CropNameLink } from '@/components/crop-name-link';
 import { formatDeliveryDate, getDefaultDeliveryDate, isContractDay } from '@/lib/format';
 import Link from 'next/link';
@@ -94,6 +96,7 @@ export default function MarketsPage() {
 
   const { orders, loading, refetch } = useOrders(filters);
   const { isWatched } = useWatchedCrops();
+  const { showToast } = useToast();
 
   const spotPriceJmdPerKg = useMemo(() => {
     if (!selectedCrop) return null;
@@ -227,7 +230,10 @@ export default function MarketsPage() {
       {!selectedCrop ? (
         <div className="flex-1 overflow-auto">
           {loading && filteredCrops.length > 0 ? (
-            <div className="py-8 text-center text-muted text-sm">Loading…</div>
+            <div className="flex flex-col items-center gap-3 py-12">
+              <Spinner size="lg" variant="primary" />
+              <p className="text-muted text-sm">Loading…</p>
+            </div>
           ) : (
             <ul className="divide-y divide-border">
               {filteredCrops.length === 0 ? (
@@ -322,7 +328,10 @@ export default function MarketsPage() {
           </div>
 
           {loading ? (
-            <div className="py-12 text-center text-muted text-sm">Loading orders…</div>
+            <div className="flex flex-col items-center gap-3 py-12">
+              <Spinner size="lg" variant="primary" />
+              <p className="text-muted text-sm">Loading orders…</p>
+            </div>
           ) : showOrderBook ? (
             <div className="flex-1 overflow-auto">
               <OrderBookView
@@ -363,6 +372,7 @@ export default function MarketsPage() {
           onSuccess={() => {
             closeNewOrderModal();
             refetch();
+            showToast(relistEnabled ? 'Contract relisted' : 'Order placed');
             if (relistEnabled && selectedCrop && deliveryDate) {
               router.replace(`/markets?crop=${encodeURIComponent(selectedCrop)}&date=${encodeURIComponent(deliveryDate)}`);
             }

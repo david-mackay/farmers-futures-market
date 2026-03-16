@@ -9,11 +9,15 @@ import { useOrders } from '@/hooks/use-orders';
 import { DeliveryOrderCard } from '@/components/deliveries/delivery-order-card';
 import { isSeller, isBuyer } from '@/lib/order-role';
 import { api } from '@/lib/api-client';
+import { Spinner } from '@/components/ui/spinner';
+import { SkeletonCard } from '@/components/ui/skeleton';
+import { useToast } from '@/components/ui/toast';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 export default function DeliveriesPage() {
   const { user } = useUser();
+  const { showToast } = useToast();
   const [escrowLoading, setEscrowLoading] = useState<string | null>(null);
 
   const { orders: filledByMe, loading: loadingFilledByMe, refetch: refetchFilledByMe } = useOrders({
@@ -85,11 +89,12 @@ export default function DeliveriesPage() {
       try {
         await api.post(`/api/orders/${orderId}/escrow/${action}`);
         refreshDeliveries();
+        showToast('Contract updated');
       } finally {
         setEscrowLoading(null);
       }
     },
-    [refreshDeliveries]
+    [refreshDeliveries, showToast]
   );
 
   const loading = loadingFilledByMe || loadingCreatedByMe || loadingMyOpen;
@@ -142,7 +147,17 @@ export default function DeliveriesPage() {
       </section>
 
       {loading ? (
-        <div className="py-12 text-center text-muted text-sm">Loading…</div>
+        <div className="flex flex-col gap-4 px-4 sm:px-6 py-8">
+          <div className="flex flex-col items-center gap-3 py-4">
+            <Spinner size="lg" variant="primary" />
+            <p className="text-muted text-sm">Loading contracts…</p>
+          </div>
+          <div className="grid gap-3">
+            {[1, 2, 3].map((i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        </div>
       ) : allFilled.length === 0 ? (
         <div className="px-4 sm:px-6 py-12 text-center border-b border-border">
           <Package className="w-12 h-12 text-muted mx-auto mb-3 opacity-60" aria-hidden />
@@ -163,7 +178,7 @@ export default function DeliveriesPage() {
                 </div>
               </div>
               <ul className="divide-y divide-border">
-                {toMarkAsDelivered.map((order) => (
+                {toMarkAsDelivered.map((order, i) => (
                   <DeliveryOrderCard
                     key={order.id}
                     order={order}
@@ -171,6 +186,8 @@ export default function DeliveriesPage() {
                     tradeHref={getTradeHref(order)}
                     openRelistOrder={getOpenRelistOrder(order)}
                     runEscrow={(action) => runEscrow(order.id, action)}
+                    className="list-stagger-item"
+                    style={{ animationDelay: `${Math.min(i * 50, 300)}ms` }}
                   />
                 ))}
               </ul>
@@ -187,7 +204,7 @@ export default function DeliveriesPage() {
                 </div>
               </div>
               <ul className="divide-y divide-border">
-                {toMarkAsReceived.map((order) => (
+                {toMarkAsReceived.map((order, i) => (
                   <DeliveryOrderCard
                     key={order.id}
                     order={order}
@@ -195,6 +212,8 @@ export default function DeliveriesPage() {
                     tradeHref={getTradeHref(order)}
                     openRelistOrder={getOpenRelistOrder(order)}
                     runEscrow={(action) => runEscrow(order.id, action)}
+                    className="list-stagger-item"
+                    style={{ animationDelay: `${Math.min(i * 50, 300)}ms` }}
                   />
                 ))}
               </ul>

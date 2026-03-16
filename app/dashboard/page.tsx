@@ -17,6 +17,9 @@ import { isSeller, isBuyer } from '@/lib/order-role';
 import { api } from '@/lib/api-client';
 import { CropType } from '@/shared/types';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
+import { SkeletonCard, SkeletonRow } from '@/components/ui/skeleton';
+import { useToast } from '@/components/ui/toast';
 import { parseCropsProduced, computeOptimizedPlan } from '@/lib/farm-optimizer';
 import type { OptimizedPlan } from '@/shared/types';
 
@@ -25,6 +28,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 export default function DashboardPage() {
   useCurrency(); // re-render when JMD/USD toggled
   const { user } = useUser();
+  const { showToast } = useToast();
   const { watched } = useWatchedCrops();
   const [searchOpen, setSearchOpen] = useState(false);
   const [farmerTab, setFarmerTab] = useState<'orders' | 'optimize'>('orders');
@@ -91,8 +95,16 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="text-center py-12 text-muted">
-        Loading...
+      <div className="flex flex-col gap-6 py-6">
+        <div className="flex flex-col items-center gap-3 py-8">
+          <Spinner size="lg" variant="primary" />
+          <p className="text-muted text-sm">Loading orders…</p>
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
       </div>
     );
   }
@@ -173,7 +185,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <ul className="divide-y divide-border">
-            {upcomingDeliveries.map((order) => {
+            {upcomingDeliveries.map((order, i) => {
               const total = order.quantity * order.price;
               const delivering = isSeller(order, user.id);
               const asBuyer = isBuyer(order, user.id);
@@ -184,12 +196,13 @@ export default function DashboardPage() {
                 try {
                   await api.post(`/api/orders/${order.id}/escrow/${action}`);
                   refreshDeliveries();
+                  showToast('Contract updated');
                 } finally {
                   setEscrowLoading(null);
                 }
               };
               return (
-                <li key={order.id}>
+                <li key={order.id} className="list-stagger-item" style={{ animationDelay: `${Math.min(i * 50, 300)}ms` }}>
                   <div className="px-4 sm:px-6 py-3.5">
                     <div className="flex items-center justify-between gap-3 min-h-[3.25rem]">
                       <div className="min-w-0">
@@ -231,8 +244,15 @@ export default function DashboardPage() {
                       {!order.funds_released_at && !order.contested_at && asBuyer && (
                         <>
                           {!order.escrow_funded_at && (
-                            <Button size="sm" disabled={loadingThis} onClick={() => runEscrow('fund')}>
-                              Fund escrow ({formatPrice(total)})
+                            <Button size="sm" disabled={loadingThis} onClick={() => runEscrow('fund')} aria-busy={loadingThis}>
+                              {loadingThis ? (
+                                <span className="inline-flex items-center gap-2">
+                                  <Spinner size="sm" variant="inverse" />
+                                  Processing…
+                                </span>
+                              ) : (
+                                `Fund escrow (${formatPrice(total)})`
+                              )}
                             </Button>
                           )}
                           {order.escrow_funded_at && !order.delivered_at && (
@@ -240,11 +260,25 @@ export default function DashboardPage() {
                           )}
                           {order.delivered_at && (
                             <>
-                              <Button size="sm" disabled={loadingThis} onClick={() => runEscrow('confirm')}>
-                                Confirm receipt
+                              <Button size="sm" disabled={loadingThis} onClick={() => runEscrow('confirm')} aria-busy={loadingThis}>
+                                {loadingThis ? (
+                                  <span className="inline-flex items-center gap-2">
+                                    <Spinner size="sm" variant="inverse" />
+                                    Processing…
+                                  </span>
+                                ) : (
+                                  'Confirm receipt'
+                                )}
                               </Button>
-                              <Button size="sm" variant="outline" disabled={loadingThis} onClick={() => runEscrow('contest')}>
-                                File dispute
+                              <Button size="sm" variant="outline" disabled={loadingThis} onClick={() => runEscrow('contest')} aria-busy={loadingThis}>
+                                {loadingThis ? (
+                                  <span className="inline-flex items-center gap-2">
+                                    <Spinner size="sm" variant="primary" />
+                                    Processing…
+                                  </span>
+                                ) : (
+                                  'File dispute'
+                                )}
                               </Button>
                               <span className="text-muted">Auto-releases in 1 day unless a dispute is filed</span>
                             </>
@@ -257,8 +291,15 @@ export default function DashboardPage() {
                             <span className="text-muted">Waiting for buyer to fund escrow</span>
                           )}
                           {order.escrow_funded_at && !order.delivered_at && (
-                            <Button size="sm" disabled={loadingThis} onClick={() => runEscrow('deliver')}>
-                              Mark as delivered
+                            <Button size="sm" disabled={loadingThis} onClick={() => runEscrow('deliver')} aria-busy={loadingThis}>
+                              {loadingThis ? (
+                                <span className="inline-flex items-center gap-2">
+                                  <Spinner size="sm" variant="inverse" />
+                                  Processing…
+                                </span>
+                              ) : (
+                                'Mark as delivered'
+                              )}
                             </Button>
                           )}
                           {order.delivered_at && (
@@ -279,7 +320,11 @@ export default function DashboardPage() {
       {isFarmer && farmerTab === 'orders' && (
         <section className="flex-1 overflow-auto">
           {loadingBids ? (
-            <div className="py-8 text-center text-muted text-sm">Loading orders…</div>
+            <div className="divide-y divide-border px-4 sm:px-6">
+              {[1, 2, 3, 4].map((i) => (
+                <SkeletonRow key={i} />
+              ))}
+            </div>
           ) : farmerCrops.length === 0 ? (
             <div className="py-8 px-4 text-center border-b border-border">
               <p className="text-muted mb-2">Add crops to your profile to see buy orders.</p>

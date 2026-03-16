@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { useDevMode } from '@/hooks/use-dev-mode';
 import { api } from '@/lib/api-client';
 
@@ -58,8 +59,16 @@ export function TransactButton({
       size={size}
       onClick={handleClick}
       disabled={disabled || loading}
+      aria-busy={loading}
     >
-      {loading ? 'Processing...' : action}
+      {loading ? (
+        <span className="inline-flex items-center justify-center gap-2">
+          <Spinner size="sm" variant="inverse" />
+          Processing…
+        </span>
+      ) : (
+        action
+      )}
     </Button>
   );
 }

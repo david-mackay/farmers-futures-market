@@ -28,15 +28,22 @@ export function BottomNav() {
               key={href}
               href={href}
               className={`
-                flex flex-col items-center justify-center gap-0.5 min-w-0 px-1 py-2
-                transition-colors duration-200 cursor-pointer
+                relative flex flex-col items-center justify-center gap-0.5 min-w-0 px-1 py-2
+                transition-colors duration-200 cursor-pointer touch-manipulation
+                active:scale-[0.97] transition-transform duration-100
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset
                 ${active ? 'text-primary' : 'text-muted hover:text-foreground'}
               `}
               aria-current={active ? 'page' : undefined}
               aria-label={label}
             >
-              <Icon className="w-6 h-6 shrink-0" strokeWidth={2} aria-hidden />
+              {active && (
+                <span
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-b bg-primary transition-opacity duration-100"
+                  aria-hidden
+                />
+              )}
+              <Icon className="w-6 h-6 shrink-0" strokeWidth={active ? 2.5 : 2} aria-hidden />
               <span className="text-[10px] font-medium truncate w-full text-center">
                 {label}
               </span>

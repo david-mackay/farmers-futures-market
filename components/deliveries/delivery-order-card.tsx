@@ -10,6 +10,7 @@ import { useCurrency } from '@/contexts/currency-context';
 import { isSeller, isBuyer } from '@/lib/order-role';
 import { api } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { CropType } from '@/shared/types';
 
 interface DeliveryOrderCardProps {
@@ -19,9 +20,11 @@ interface DeliveryOrderCardProps {
   /** When set, user already has an open relist for this contract; they must cancel it before relisting again */
   openRelistOrder?: Order;
   runEscrow: (action: 'fund' | 'deliver' | 'confirm' | 'contest') => Promise<void>;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
-export function DeliveryOrderCard({ order, loading, tradeHref, openRelistOrder, runEscrow }: DeliveryOrderCardProps) {
+export function DeliveryOrderCard({ order, loading, tradeHref, openRelistOrder, runEscrow, className = '', style }: DeliveryOrderCardProps) {
   useCurrency(); // re-render when JMD/USD toggled
   const { user } = useUser();
   if (!user) return null;
@@ -31,7 +34,7 @@ export function DeliveryOrderCard({ order, loading, tradeHref, openRelistOrder, 
   const asSeller = delivering;
 
   return (
-    <li>
+    <li className={className} style={style}>
       <div className="px-4 sm:px-6 py-3.5">
         <div className="flex items-center justify-between gap-3 min-h-[3.25rem]">
           <div className="min-w-0">
@@ -84,8 +87,15 @@ export function DeliveryOrderCard({ order, loading, tradeHref, openRelistOrder, 
           {!order.funds_released_at && !order.contested_at && asBuyer && (
             <>
               {!order.escrow_funded_at && (
-                <Button size="sm" disabled={loading} onClick={() => runEscrow('fund')}>
-                  Fund escrow ({formatPrice(total)})
+                <Button size="sm" disabled={loading} onClick={() => runEscrow('fund')} aria-busy={loading}>
+                  {loading ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Spinner size="sm" variant="inverse" />
+                      Processing…
+                    </span>
+                  ) : (
+                    `Fund escrow (${formatPrice(total)})`
+                  )}
                 </Button>
               )}
               {order.escrow_funded_at && !order.delivered_at && (
@@ -93,11 +103,25 @@ export function DeliveryOrderCard({ order, loading, tradeHref, openRelistOrder, 
               )}
               {order.delivered_at && (
                 <>
-                  <Button size="sm" disabled={loading} onClick={() => runEscrow('confirm')}>
-                    Confirm receipt
+                  <Button size="sm" disabled={loading} onClick={() => runEscrow('confirm')} aria-busy={loading}>
+                    {loading ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Spinner size="sm" variant="inverse" />
+                        Processing…
+                      </span>
+                    ) : (
+                      'Confirm receipt'
+                    )}
                   </Button>
-                  <Button size="sm" variant="outline" disabled={loading} onClick={() => runEscrow('contest')}>
-                    File dispute
+                  <Button size="sm" variant="outline" disabled={loading} onClick={() => runEscrow('contest')} aria-busy={loading}>
+                    {loading ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Spinner size="sm" variant="primary" />
+                        Processing…
+                      </span>
+                    ) : (
+                      'File dispute'
+                    )}
                   </Button>
                   <span className="text-muted">Auto-releases in 1 day unless a dispute is filed</span>
                 </>
@@ -110,8 +134,15 @@ export function DeliveryOrderCard({ order, loading, tradeHref, openRelistOrder, 
                 <span className="text-muted">Waiting for buyer to fund escrow</span>
               )}
               {order.escrow_funded_at && !order.delivered_at && (
-                <Button size="sm" disabled={loading} onClick={() => runEscrow('deliver')}>
-                  Mark as delivered
+                <Button size="sm" disabled={loading} onClick={() => runEscrow('deliver')} aria-busy={loading}>
+                  {loading ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Spinner size="sm" variant="inverse" />
+                      Processing…
+                    </span>
+                  ) : (
+                    'Mark as delivered'
+                  )}
                 </Button>
               )}
               {order.delivered_at && (

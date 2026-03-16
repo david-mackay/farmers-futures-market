@@ -5,6 +5,7 @@ import { Calendar } from "lucide-react";
 import { CropType, OrderType } from "@/shared/types";
 import { CROP_LABELS } from "@/shared/constants";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { DeliveryDateModal } from "@/components/delivery-date-modal";
@@ -396,18 +397,29 @@ export function OrderForm({
         disabled={
           orderType === OrderType.BID ? bidLoading || !canCreateBid : loading
         }
-        className="w-full"
+        className="w-full min-h-[44px]"
         size="lg"
+        aria-busy={orderType === OrderType.BID ? bidLoading : loading}
       >
-        {orderType === OrderType.BID
-          ? bidLoading
-            ? "Depositing USDC…"
-            : !canCreateBid
-              ? "Connect wallet to post buy order"
-              : "Post Buy Order (deposit USDC)"
-          : loading
-            ? "Creating..."
-            : "Post Sell Order"}
+        {orderType === OrderType.BID ? (
+          bidLoading ? (
+            <span className="inline-flex items-center justify-center gap-2">
+              <Spinner size="sm" variant="inverse" />
+              Depositing USDC…
+            </span>
+          ) : !canCreateBid ? (
+            "Connect wallet to post buy order"
+          ) : (
+            "Post Buy Order (deposit USDC)"
+          )
+        ) : loading ? (
+          <span className="inline-flex items-center justify-center gap-2">
+            <Spinner size="sm" variant="inverse" />
+            Creating…
+          </span>
+        ) : (
+          "Post Sell Order"
+        )}
       </Button>
     </form>
   );

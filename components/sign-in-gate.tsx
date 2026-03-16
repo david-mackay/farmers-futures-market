@@ -24,7 +24,10 @@ export function SignInGate() {
           aria-hidden
         />
         <div className="relative w-full max-w-lg mx-auto text-center flex flex-col items-center">
-          <div className="mb-6 sm:mb-8">
+          <div
+            className="mb-6 sm:mb-8 signin-stagger opacity-0"
+            style={{ animationDelay: '0ms' }}
+          >
             <Image
               src="/assets/ffm-logo.png"
               alt=""
@@ -33,18 +36,27 @@ export function SignInGate() {
               className="h-16 w-16 sm:h-20 sm:w-20 object-contain"
             />
           </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground tracking-tight leading-tight">
+          <h1
+            className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground tracking-tight leading-tight signin-stagger opacity-0"
+            style={{ animationDelay: '60ms' }}
+          >
             Jamaica imports over half its food.
             <br />
             <span className="text-primary">Grow local. Lock in prices.</span>
           </h1>
-          <p className="mt-4 sm:mt-5 text-sm sm:text-base text-muted max-w-md leading-relaxed">
+          <p
+            className="mt-4 sm:mt-5 text-sm sm:text-base text-muted max-w-md leading-relaxed signin-stagger opacity-0"
+            style={{ animationDelay: '120ms' }}
+          >
             FFM connects farmers and buyers with crop futures—agree on price and
             delivery date today. Less waste, more local production, less
             reliance on imports.
           </p>
 
-          <div className="mt-8 sm:mt-10 w-full max-w-xs sm:max-w-sm">
+          <div
+            className="mt-8 sm:mt-10 w-full max-w-xs sm:max-w-sm signin-stagger opacity-0"
+            style={{ animationDelay: '180ms' }}
+          >
             {appkitProjectId ? (
               <div className="flex justify-center">
                 <SignInButton />

@@ -10,6 +10,7 @@ import { CropNameLink } from '@/components/crop-name-link';
 import { formatPrice, formatRevenue } from '@/lib/format';
 import { useCurrency } from '@/contexts/currency-context';
 import Link from 'next/link';
+import { Spinner } from '@/components/ui/spinner';
 
 export default function PlantAdvisorPage() {
   useCurrency(); // re-render when JMD/USD toggled
@@ -22,7 +23,14 @@ export default function PlantAdvisorPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-center py-12 text-muted">Analyzing market demand...</div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-12">
+        <Spinner size="lg" variant="primary" />
+        <p className="text-muted text-sm">Analyzing market demand…</p>
+      </div>
+    );
+  }
 
   const top3 = recommendations.slice(0, 3);
   const rest = recommendations.slice(3);
