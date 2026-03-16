@@ -1,36 +1,41 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import Image from 'next/image';
-import { usePathname } from 'next/navigation';
-import { Sun, Moon, LogOut } from 'lucide-react';
-import { AppKitButton, useDisconnect } from '@reown/appkit/react';
-import { useUser } from '@/hooks/use-user';
-import { useDevMode } from '@/hooks/use-dev-mode';
-import { useTheme } from '@/contexts/theme-context';
-import { useCurrency } from '@/contexts/currency-context';
-import { Badge } from '@/components/ui/badge';
-import { appkitProjectId } from '@/config/appkit-config';
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { Sun, Moon, LogOut } from "lucide-react";
+import { useAppKit, useDisconnect } from "@reown/appkit/react";
+import { useUser } from "@/hooks/use-user";
+import { useDevMode } from "@/hooks/use-dev-mode";
+import { useTheme } from "@/contexts/theme-context";
+import { useCurrency } from "@/contexts/currency-context";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { appkitProjectId } from "@/config/appkit-config";
 
 const NAV_LINKS = [
-  { href: '/markets', label: 'Markets' },
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/funds', label: 'Funds' },
-  { href: '/deliveries', label: 'Contracts' },
-  { href: '/crops', label: 'Crops' },
-  { href: '/profile', label: 'Profile' },
+  { href: "/markets", label: "Markets" },
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/funds", label: "Funds" },
+  { href: "/deliveries", label: "Contracts" },
+  { href: "/crops", label: "Crops" },
+  { href: "/profile", label: "Profile" },
 ];
 
 export function NavBar() {
   const pathname = usePathname();
   const { user } = useUser();
+  const { open } = useAppKit();
   const { disconnect } = useDisconnect();
   const devMode = useDevMode();
   const { theme, toggleTheme } = useTheme();
   const { currency, toggleCurrency } = useCurrency();
 
   return (
-    <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border safe-area-pt overflow-x-hidden" aria-label="Site header">
+    <header
+      className="sticky top-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border safe-area-pt overflow-x-hidden"
+      aria-label="Site header"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 min-w-0">
         <div className="flex items-center justify-between gap-2 h-12 sm:h-14 md:h-16 min-h-[3rem] sm:min-h-[3.5rem] min-w-0">
           {/* Logo: single mark on all viewports (Apple-style) */}
@@ -47,7 +52,9 @@ export function NavBar() {
               className="h-12 w-12 sm:h-14 sm:w-14 object-contain"
               priority
             />
-            <span className="logo-font text-xl sm:text-2xl tracking-wide text-foreground truncate hidden sm:inline">FFM</span>
+            <span className="logo-font text-xl sm:text-2xl tracking-wide text-foreground truncate hidden sm:inline">
+              FFM
+            </span>
           </Link>
 
           {/* Desktop nav links */}
@@ -61,7 +68,7 @@ export function NavBar() {
                   className={`
                     px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 cursor-pointer
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2
-                    ${active ? 'bg-primary/10 text-primary' : 'text-muted hover:text-foreground hover:bg-muted-bg'}
+                    ${active ? "bg-primary/10 text-primary" : "text-muted hover:text-foreground hover:bg-muted-bg"}
                   `}
                 >
                   {link.label}
@@ -76,18 +83,24 @@ export function NavBar() {
               type="button"
               onClick={toggleCurrency}
               className="px-2 py-1.5 rounded-lg text-sm font-medium text-muted hover:text-foreground hover:bg-muted-bg transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 touch-manipulation border border-border"
-              aria-label={currency === 'JMD' ? 'Show prices in USD' : 'Show prices in JMD'}
-              title={currency === 'JMD' ? 'Switch to USD' : 'Switch to JMD'}
+              aria-label={
+                currency === "JMD" ? "Show prices in USD" : "Show prices in JMD"
+              }
+              title={currency === "JMD" ? "Switch to USD" : "Switch to JMD"}
             >
-              {currency === 'JMD' ? 'JMD' : 'USD'}
+              {currency === "JMD" ? "JMD" : "USD"}
             </button>
             <button
               type="button"
               onClick={toggleTheme}
               className="p-2 rounded-lg text-muted hover:text-foreground hover:bg-muted-bg transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 touch-manipulation"
-              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-label={
+                theme === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
+              }
             >
-              {theme === 'dark' ? (
+              {theme === "dark" ? (
                 <Sun className="w-5 h-5" strokeWidth={2} aria-hidden />
               ) : (
                 <Moon className="w-5 h-5" strokeWidth={2} aria-hidden />
@@ -99,17 +112,29 @@ export function NavBar() {
               </span>
             )}
             {appkitProjectId && !user && (
-              <AppKitButton />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => open()}
+              >
+                Sign in
+              </Button>
             )}
             {user && (
               <>
-                <Badge variant={user.is_farmer ? 'farmer' : 'trader'}>
-                  {user.is_farmer ? 'Farmer' : 'Buyer'}
+                <Badge variant={user.is_farmer ? "farmer" : "trader"}>
+                  {user.is_farmer ? "Farmer" : "Buyer"}
                 </Badge>
                 {user.is_verified && user.is_farmer && (
-                  <span className="hidden sm:inline"><Badge variant="verified">Verified</Badge></span>
+                  <span className="hidden sm:inline">
+                    <Badge variant="verified">Verified</Badge>
+                  </span>
                 )}
-                <span className="text-sm text-foreground truncate max-w-[5rem] sm:max-w-[8rem]" title={user.display_name}>
+                <span
+                  className="text-sm text-foreground truncate max-w-[5rem] sm:max-w-[8rem]"
+                  title={user.display_name}
+                >
                   {user.display_name}
                 </span>
                 <button

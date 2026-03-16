@@ -1,11 +1,23 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Transaction } from '@solana/web3.js';
+import { SendTransactionError, Transaction } from '@solana/web3.js';
 import { useAppKitAccount, useAppKitProvider } from '@reown/appkit/react';
 import { useAppKitConnection } from '@reown/appkit-adapter-solana/react';
 import type { Provider } from '@reown/appkit-adapter-solana/react';
 import { api } from '@/lib/api-client';
+
+const LOW_BALANCE_ERROR_MESSAGE =
+  'Are you sure you have enough funds for this? Check your profile.';
+
+function hasInsufficientFundsSignal(text: string): boolean {
+  const lower = text.toLowerCase();
+  return (
+    lower.includes('insufficient funds') ||
+    lower.includes('insufficient lamports') ||
+    lower.includes('attempt to debit an account but found no record of a prior credit')
+  );
+}
 
 /**
  * Create a BID order with USDC deposit: prepare-bid → sign & send → confirm-bid.
@@ -77,9 +89,25 @@ export function useCreateBidWithDeposit() {
           ...params,
         });
         return true;
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Deposit failed. Try again.';
+      } catch (err: unknown) {
+        let message = err instanceof Error ? err.message : 'Deposit failed. Try again.';
+
+        // Wallet adapters can surface simulation details only through SendTransactionError logs.
+        if (err instanceof SendTransactionError) {
+          try {
+            const logs = await err.getLogs(connection);
+            if (hasInsufficientFundsSignal([message, ...logs].join('\n'))) {
+              message = LOW_BALANCE_ERROR_MESSAGE;
+            }
+          } catch {
+            if (hasInsufficientFundsSignal(message)) {
+              message = LOW_BALANCE_ERROR_MESSAGE;
+            }
+          }
+        } else if (hasInsufficientFundsSignal(message)) {
+          message = LOW_BALANCE_ERROR_MESSAGE;
+        }
+
         setError(message);
         return false;
       } finally {

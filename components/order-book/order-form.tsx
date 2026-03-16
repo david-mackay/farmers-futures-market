@@ -53,7 +53,7 @@ export function OrderForm({
   fixedCrop,
   spotPriceJmdPerKg,
 }: OrderFormProps) {
-  useCurrency(); // re-render when JMD/USD toggled
+  const { currency } = useCurrency();
   const { user } = useUser();
   const {
     createBidOrder,
@@ -62,12 +62,24 @@ export function OrderForm({
     clearError: clearBidError,
     canCreateBid,
   } = useCreateBidWithDeposit();
+  const toDisplayPriceInput = (priceJmdPerKg: number): string => {
+    const displayPrice =
+      currency === "USD" ? priceJmdPerKg / JMD_PER_USD : priceJmdPerKg;
+    return displayPrice.toFixed(2);
+  };
+
+  const toStoredPriceJmd = (priceInDisplayCurrency: number): number => {
+    return currency === "USD"
+      ? priceInDisplayCurrency * JMD_PER_USD
+      : priceInDisplayCurrency;
+  };
+
   const [cropType, setCropType] = useState(defaultCrop || "");
   const [orderType, setOrderType] = useState<string>(
     defaultType || OrderType.BID,
   );
   const [pricePerKg, setPricePerKg] = useState(
-    defaultPricePerKg?.toString() || "",
+    defaultPricePerKg != null ? toDisplayPriceInput(defaultPricePerKg) : "",
   );
   const [quantityKg, setQuantityKg] = useState(
     defaultQuantityKg?.toString() || "",
@@ -79,6 +91,7 @@ export function OrderForm({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const priceInputRef = useRef<HTMLInputElement>(null);
+  const previousCurrencyRef = useRef(currency);
 
   useEffect(() => {
     if (fixedCrop && defaultCrop) {
@@ -99,6 +112,28 @@ export function OrderForm({
   }, [relistSourceOrderId, defaultDeliveryDate]);
 
   useEffect(() => {
+    if (defaultPricePerKg != null) {
+      setPricePerKg(toDisplayPriceInput(defaultPricePerKg));
+    }
+  }, [defaultPricePerKg]);
+
+  useEffect(() => {
+    const prevCurrency = previousCurrencyRef.current;
+    if (prevCurrency === currency) return;
+    previousCurrencyRef.current = currency;
+
+    if (!pricePerKg) return;
+    const parsed = parseFloat(pricePerKg);
+    if (!Number.isFinite(parsed)) return;
+
+    const converted =
+      prevCurrency === "JMD" && currency === "USD"
+        ? parsed / JMD_PER_USD
+        : parsed * JMD_PER_USD;
+    setPricePerKg(converted.toFixed(2));
+  }, [currency, pricePerKg]);
+
+  useEffect(() => {
     if (!autoFocusFirstField) return;
     const t = requestAnimationFrame(() => {
       priceInputRef.current?.focus();
@@ -108,8 +143,9 @@ export function OrderForm({
 
   const canCreateAsk = user?.is_farmer && user?.is_verified;
   const kg = parseInt(quantityKg, 10) || 0;
-  const price = parseFloat(pricePerKg) || 0;
-  const totalValue = kg > 0 && price > 0 ? kg * price : 0;
+  const displayPrice = parseFloat(pricePerKg) || 0;
+  const priceJmdPerKg = displayPrice > 0 ? toStoredPriceJmd(displayPrice) : 0;
+  const totalValue = kg > 0 && priceJmdPerKg > 0 ? kg * priceJmdPerKg : 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,14 +155,16 @@ export function OrderForm({
     if (orderType === OrderType.BID) {
       const ok = await createBidOrder({
         crop_type: cropType,
-        price: parseFloat(pricePerKg),
+        price: toStoredPriceJmd(parseFloat(pricePerKg)),
         quantity: parseInt(quantityKg, 10),
         delivery_date: deliveryDate,
         relist_source_order_id: relistSourceOrderId,
       });
       if (ok) {
         setCropType(defaultCrop ?? "");
-        setPricePerKg(defaultPricePerKg?.toString() ?? "");
+        setPricePerKg(
+          defaultPricePerKg != null ? toDisplayPriceInput(defaultPricePerKg) : "",
+        );
         setQuantityKg(defaultQuantityKg?.toString() ?? "");
         setDeliveryDate(defaultDeliveryDate ?? "");
         onSuccess?.();
@@ -139,13 +177,15 @@ export function OrderForm({
       await api.post("/api/orders", {
         crop_type: cropType,
         type: orderType,
-        price: parseFloat(pricePerKg),
+        price: toStoredPriceJmd(parseFloat(pricePerKg)),
         quantity: parseInt(quantityKg, 10),
         delivery_date: deliveryDate,
         relist_source_order_id: relistSourceOrderId,
       });
       setCropType(defaultCrop ?? "");
-      setPricePerKg(defaultPricePerKg?.toString() ?? "");
+      setPricePerKg(
+        defaultPricePerKg != null ? toDisplayPriceInput(defaultPricePerKg) : "",
+      );
       setQuantityKg(defaultQuantityKg?.toString() ?? "");
       setDeliveryDate(defaultDeliveryDate ?? "");
       onSuccess?.();
@@ -291,7 +331,7 @@ export function OrderForm({
           <p className="text-xs text-muted mt-1">
             Your wallet will send{" "}
             <span className="font-data font-semibold text-primary">
-              ${orderTotalUsd(price, kg, JMD_PER_USD).toFixed(2)} USDC
+              ${orderTotalUsd(priceJmdPerKg, kg, JMD_PER_USD).toFixed(2)} USDC
             </span>{" "}
             to escrow. This is the total that will be deducted.
           </p>
