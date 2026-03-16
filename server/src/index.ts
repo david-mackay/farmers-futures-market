@@ -16,6 +16,21 @@ import { setupSocketHandlers } from './socket/handlers';
 // Import db to trigger schema creation
 import './db/connection';
 
+// Process-level error handlers: log then exit so Render restarts the service automatically
+function exitAfterLog(code: number) {
+  setTimeout(() => process.exit(code), 1000); // allow logs to flush
+}
+
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err);
+  exitAfterLog(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[unhandledRejection]', { reason, promise: String(promise) });
+  exitAfterLog(1);
+});
+
 const app = express();
 const server = createServer(app);
 
