@@ -93,7 +93,7 @@ export function useCreateBidWithDeposit() {
         let message = err instanceof Error ? err.message : 'Deposit failed. Try again.';
 
         // Wallet adapters can surface simulation details only through SendTransactionError logs.
-        if (err instanceof SendTransactionError) {
+        if (err instanceof SendTransactionError && connection) {
           try {
             const logs = await err.getLogs(connection);
             if (hasInsufficientFundsSignal([message, ...logs].join('\n'))) {
