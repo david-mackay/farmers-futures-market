@@ -40,17 +40,17 @@ export function SignInGate() {
             className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground tracking-tight leading-tight signin-stagger opacity-0"
             style={{ animationDelay: '60ms' }}
           >
-            Jamaica imports over half its food.
+            Empower Jamaica's farmers to make wise, informed decisions.
             <br />
-            <span className="text-primary">Grow local. Lock in prices.</span>
+            <span className="text-primary">Lock in prices. Plan with confidence.</span>
           </h1>
           <p
             className="mt-4 sm:mt-5 text-sm sm:text-base text-muted max-w-md leading-relaxed signin-stagger opacity-0"
             style={{ animationDelay: '120ms' }}
           >
-            FFM connects farmers and buyers with crop futures—agree on price and
-            delivery date today. Less waste, more local production, less
-            reliance on imports.
+            FFM gives farmers the information and tools they need—crop futures,
+            real demand, and clear prices—so they can decide what to grow and
+            when to sell. Less guesswork, more control.
           </p>
 
           <div
